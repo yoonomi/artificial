@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧩 集群化知识图谱演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .demo-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: rgba(15, 15, 30, 0.95);
+            border-right: 1px solid rgba(0, 212, 255, 0.3);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            position: relative;
+        }
+
+        .title {
+            font-size: 24px;
+            color: #00D4FF;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .section {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .section h3 {
+            color: #00D4FF;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .control-group input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+
+        .sample-data {
+            font-size: 12px;
+            line-height: 1.4;
+            opacity: 0.8;
+        }
+
+        .cluster-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 6px;
+        }
+
+        .cluster-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .cluster-info {
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .visualization {
+            width: 100%;
+            height: 500px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .node {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid #ffffff;
+            color: #ffffff;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .node:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .edge {
+            position: absolute;
+            height: 2px;
+            background: rgba(0, 212, 255, 0.6);
+            transform-origin: left center;
+            z-index: 1;
+        }
+
+        .mode-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 212, 255, 0.2);
+            border: 1px solid rgba(0, 212, 255, 0.5);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(0, 212, 255, 0.5);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .comparison-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        .comparison-title {
+            color: #00D4FF;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .node-count {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .cluster-mode .node-count {
+            color: #00FF88;
+        }
+
+        .detail-mode .node-count {
+            color: #FF6B6B;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <h1 class="title">🧩 集群化演示</h1>
+            
+            <div class="section">
+                <h3>🎛️ 显示控制</h3>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="clusterModeToggle" checked>
+                        🧩 集群模式
+                    </label>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>📊 数据统计</h3>
+                <div id="statsContainer">
+                    <div>原始节点: <span id="originalNodes">15</span></div>
+                    <div>集群数量: <span id="clusterCount">4</span></div>
+                    <div>当前显示: <span id="currentNodes">4</span></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>🧩 集群信息</h3>
+                <div id="clusterList">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>💡 说明</h3>
+                <div class="sample-data">
+                    <p><strong>集群模式：</strong>显示语义相似的概念聚合后的集群节点，画面简洁清晰。</p>
+                    <br>
+                    <p><strong>详细模式：</strong>显示所有原始节点，可以看到完整的概念关系。</p>
+                    <br>
+                    <p>点击切换体验不同的显示效果！</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主要内容 -->
+        <div class="main-content">
+            <div class="mode-indicator" id="modeIndicator">🧩 集群模式</div>
+            
+            <div class="visualization" id="visualization">
+                <!-- 节点和边将在这里动态生成 -->
+            </div>
+
+            <div class="comparison">
+                <div class="comparison-item cluster-mode">
+                    <div class="comparison-title">🧩 集群模式</div>
+                    <div class="node-count" id="clusterModeCount">4</div>
+                    <div>个集群节点</div>
+                    <div style="margin-top: 10px; font-size: 12px; opacity: 0.8;">
+                        简洁清晰，告别"毛球"
+                    </div>
+                </div>
+                <div class="comparison-item detail-mode">
+                    <div class="comparison-title">📝 详细模式</div>
+                    <div class="node-count" id="detailModeCount">15</div>
+                    <div>个原始节点</div>
+                    <div style="margin-top: 10px; font-size: 12px; opacity: 0.8;">
+                        完整信息，详细关系
+                    </div>
+                </div>
+            </div>
+
+            <div class="tooltip" id="tooltip"></div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟数据
+        const sampleData = {
+            nodes: [
+                // AI集群
+                { id: 'n1', label: '人工智能', clusterId: 'ai', clusterName: 'AI技术', color: '#FF6B6B' },
+                { id: 'n2', label: '机器学习', clusterId: 'ai', clusterName: 'AI技术', color: '#FF6B6B' },
+                { id: 'n3', label: '深度学习', clusterId: 'ai', clusterName: 'AI技术', color: '#FF6B6B' },
+                { id: 'n4', label: '神经网络', clusterId: 'ai', clusterName: 'AI技术', color: '#FF6B6B' },
+                
+                // 技术集群
+                { id: 'n5', label: '计算机', clusterId: 'tech', clusterName: '技术系统', color: '#4ECDC4' },
+                { id: 'n6', label: '系统', clusterId: 'tech', clusterName: '技术系统', color: '#4ECDC4' },
+                { id: 'n7', label: '数据', clusterId: 'tech', clusterName: '技术系统', color: '#4ECDC4' },
+                { id: 'n8', label: '算法', clusterId: 'tech', clusterName: '技术系统', color: '#4ECDC4' },
+                
+                // 商业集群
+                { id: 'n9', label: '企业', clusterId: 'business', clusterName: '商业管理', color: '#45B7D1' },
+                { id: 'n10', label: '管理', clusterId: 'business', clusterName: '商业管理', color: '#45B7D1' },
+                { id: 'n11', label: '战略', clusterId: 'business', clusterName: '商业管理', color: '#45B7D1' },
+                
+                // 研究集群
+                { id: 'n12', label: '科学', clusterId: 'research', clusterName: '科学研究', color: '#96CEB4' },
+                { id: 'n13', label: '研究', clusterId: 'research', clusterName: '科学研究', color: '#96CEB4' },
+                { id: 'n14', label: '实验', clusterId: 'research', clusterName: '科学研究', color: '#96CEB4' },
+                { id: 'n15', label: '分析', clusterId: 'research', clusterName: '科学研究', color: '#96CEB4' }
+            ],
+            edges: [
+                { source: 'n1', target: 'n2' },
+                { source: 'n2', target: 'n3' },
+                { source: 'n3', target: 'n4' },
+                { source: 'n5', target: 'n6' },
+                { source: 'n6', target: 'n7' },
+                { source: 'n9', target: 'n10' },
+                { source: 'n10', target: 'n11' },
+                { source: 'n12', target: 'n13' }
+            ],
+            clusters: {
+                ai: { name: 'AI技术', count: 4, color: '#FF6B6B' },
+                tech: { name: '技术系统', count: 4, color: '#4ECDC4' },
+                business: { name: '商业管理', count: 3, color: '#45B7D1' },
+                research: { name: '科学研究', count: 4, color: '#96CEB4' }
+            }
+        };
+
+        let isClusterMode = true;
+
+        // 生成集群节点
+        function generateClusterNodes() {
+            const clusters = [];
+            let index = 0;
+            
+            Object.entries(sampleData.clusters).forEach(([clusterId, clusterInfo]) => {
+                clusters.push({
+                    id: `cluster-${clusterId}`,
+                    label: `${clusterInfo.name}\n(${clusterInfo.count}个)`,
+                    color: clusterInfo.color,
+                    size: Math.max(60, clusterInfo.count * 15),
+                    clusterId: clusterId,
+                    memberCount: clusterInfo.count,
+                    type: 'cluster'
+                });
+            });
+            
+            return clusters;
+        }
+
+        // 渲染节点
+        function renderNodes(nodes) {
+            const visualization = document.getElementById('visualization');
+            const rect = visualization.getBoundingClientRect();
+            
+            // 清空现有内容
+            visualization.innerHTML = '';
+            
+            // 计算节点位置（简单的圆形布局）
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const radius = Math.min(centerX, centerY) * 0.6;
+            
+            nodes.forEach((node, index) => {
+                const angle = (index / nodes.length) * 2 * Math.PI;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                const nodeElement = document.createElement('div');
+                nodeElement.className = 'node';
+                nodeElement.style.left = `${x - (node.size || 50) / 2}px`;
+                nodeElement.style.top = `${y - (node.size || 50) / 2}px`;
+                nodeElement.style.width = `${node.size || 50}px`;
+                nodeElement.style.height = `${node.size || 50}px`;
+                nodeElement.style.backgroundColor = node.color;
+                nodeElement.innerHTML = node.label.replace('\n', '<br>');
+                
+                // 添加悬停事件
+                nodeElement.addEventListener('mouseenter', (e) => {
+                    const tooltip = document.getElementById('tooltip');
+                    let content = `节点: ${node.label.replace('\n', ' ')}<br>`;
+                    content += `类型: ${node.type === 'cluster' ? '集群节点' : '概念节点'}<br>`;
+                    if (node.type === 'cluster') {
+                        content += `成员数量: ${node.memberCount}`;
+                    } else {
+                        content += `所属集群: ${node.clusterName}`;
+                    }
+                    
+                    tooltip.innerHTML = content;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = `${e.pageX + 10}px`;
+                    tooltip.style.top = `${e.pageY - 10}px`;
+                });
+                
+                nodeElement.addEventListener('mouseleave', () => {
+                    document.getElementById('tooltip').style.display = 'none';
+                });
+                
+                visualization.appendChild(nodeElement);
+            });
+            
+            // 更新统计信息
+            document.getElementById('currentNodes').textContent = nodes.length;
+        }
+
+        // 更新集群列表
+        function updateClusterList() {
+            const container = document.getElementById('clusterList');
+            container.innerHTML = '';
+            
+            Object.entries(sampleData.clusters).forEach(([clusterId, clusterInfo]) => {
+                const item = document.createElement('div');
+                item.className = 'cluster-item';
+                
+                item.innerHTML = `
+                    <div class="cluster-color" style="background-color: ${clusterInfo.color}"></div>
+                    <div class="cluster-info">
+                        <div><strong>${clusterInfo.name}</strong></div>
+                        <div>${clusterInfo.count} 个节点</div>
+                    </div>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+
+        // 切换显示模式
+        function toggleMode() {
+            isClusterMode = !isClusterMode;
+            
+            const modeIndicator = document.getElementById('modeIndicator');
+            
+            if (isClusterMode) {
+                // 显示集群模式
+                modeIndicator.textContent = '🧩 集群模式';
+                renderNodes(generateClusterNodes());
+            } else {
+                // 显示详细模式
+                modeIndicator.textContent = '📝 详细模式';
+                renderNodes(sampleData.nodes.map(node => ({
+                    ...node,
+                    size: 40,
+                    label: node.label
+                })));
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 设置事件监听器
+            document.getElementById('clusterModeToggle').addEventListener('change', (e) => {
+                isClusterMode = e.target.checked;
+                toggleMode();
+            });
+            
+            // 更新集群列表
+            updateClusterList();
+            
+            // 初始渲染
+            toggleMode();
+            
+            console.log('🧩 集群化演示已加载');
+            console.log('📊 原始节点数:', sampleData.nodes.length);
+            console.log('🧩 集群数:', Object.keys(sampleData.clusters).length);
+        });
+    </script>
+</body>
+</html> 

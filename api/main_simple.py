@@ -198,21 +198,70 @@ def get_color_for_keyword(keyword: str) -> str:
     hash_value = int(hashlib.md5(keyword.encode()).hexdigest(), 16)
     return colors[hash_value % len(colors)]
 
+def assign_cluster_ids(keywords: List[str]) -> Dict[str, str]:
+    """基于语义相似性为关键词分配集群ID"""
+    clusters = {}
+    
+    # 预定义的语义集群
+    ai_terms = {'人工智能', '机器学习', '深度学习', '神经网络', '算法', 'AI', 'ML', 'DL'}
+    tech_terms = {'技术', '系统', '平台', '工具', '软件', '硬件', '计算机', '数据'}
+    business_terms = {'企业', '商业', '公司', '管理', '战略', '市场', '客户', '服务'}
+    research_terms = {'研究', '科学', '实验', '理论', '方法', '模型', '分析', '测试'}
+    
+    for keyword in keywords:
+        # 根据关键词内容分配集群
+        if any(term in keyword for term in ai_terms) or keyword in ai_terms:
+            clusters[keyword] = 'cluster_ai'
+        elif any(term in keyword for term in tech_terms) or keyword in tech_terms:
+            clusters[keyword] = 'cluster_tech'
+        elif any(term in keyword for term in business_terms) or keyword in business_terms:
+            clusters[keyword] = 'cluster_business'
+        elif any(term in keyword for term in research_terms) or keyword in research_terms:
+            clusters[keyword] = 'cluster_research'
+        elif '开发' in keyword or '编程' in keyword or '代码' in keyword:
+            clusters[keyword] = 'cluster_development'
+        elif '网络' in keyword or '互联网' in keyword or '通信' in keyword:
+            clusters[keyword] = 'cluster_network'
+        else:
+            # 默认分配到通用集群
+            clusters[keyword] = 'cluster_general'
+    
+    return clusters
+
+def get_cluster_info(cluster_id: str) -> Dict[str, str]:
+    """获取集群的显示信息"""
+    cluster_info = {
+        'cluster_ai': {'name': 'AI技术', 'color': '#FF6B6B'},
+        'cluster_tech': {'name': '技术系统', 'color': '#4ECDC4'},
+        'cluster_business': {'name': '商业管理', 'color': '#45B7D1'},
+        'cluster_research': {'name': '科学研究', 'color': '#96CEB4'},
+        'cluster_development': {'name': '软件开发', 'color': '#FFEAA7'},
+        'cluster_network': {'name': '网络通信', 'color': '#DDA0DD'},
+        'cluster_general': {'name': '通用概念', 'color': '#98D8C8'},
+    }
+    return cluster_info.get(cluster_id, {'name': cluster_id, 'color': '#A8E6CF'})
+
 def generate_graph_data_from_text(text: str) -> Dict[str, Any]:
-    """根据文本生成知识图谱数据"""
+    """根据文本生成知识图谱数据（包含集群信息）"""
     keywords = extract_keywords_from_text(text)
+    cluster_assignments = assign_cluster_ids(keywords)
     
     nodes = []
     edges = []
     
-    # 生成节点
+    # 生成节点（包含clusterId）
     for i, keyword in enumerate(keywords):
+        cluster_id = cluster_assignments[keyword]
+        cluster_info = get_cluster_info(cluster_id)
+        
         node = {
             "id": f"n-{i+1}",
             "label": keyword,
             "size": 1.2 + random.uniform(0.3, 1.8),  # 随机大小
-            "color": get_color_for_keyword(keyword),
+            "color": cluster_info['color'],  # 使用集群颜色
             "type": "concept",
+            "clusterId": cluster_id,  # 添加集群ID
+            "clusterName": cluster_info['name'],  # 添加集群名称
             "source_sentence": text[:100] + "..." if len(text) > 100 else text
         }
         nodes.append(node)
@@ -249,12 +298,26 @@ def generate_graph_data_from_text(text: str) -> Dict[str, Any]:
                 }
                 edges.append(edge)
     
+    # 计算集群统计信息
+    cluster_stats = {}
+    for node in nodes:
+        cluster_id = node['clusterId']
+        if cluster_id not in cluster_stats:
+            cluster_stats[cluster_id] = {
+                'name': node['clusterName'],
+                'count': 0,
+                'color': node['color']
+            }
+        cluster_stats[cluster_id]['count'] += 1
+    
     return {
         "nodes": nodes,
         "edges": edges,
+        "clusters": cluster_stats,  # 添加集群统计信息
         "metadata": {
             "node_count": len(nodes),
             "edge_count": len(edges),
+            "cluster_count": len(cluster_stats),  # 添加集群数量
             "text_length": len(text),
             "analysis_duration": round(random.uniform(5.0, 25.0), 1),
             "generated_at": datetime.utcnow().isoformat() + "Z"

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GraphCanvas, darkTheme } from 'reagraph';
+import KnowledgeGraph from './KnowledgeGraph';
 import './AnalysisPage.css';
 
 const AnalysisPage = () => {
@@ -108,13 +109,16 @@ const AnalysisPage = () => {
               const graphData = await graphResponse.json();
               console.log('📈 图谱数据获取成功:', graphData);
               
-              // 更新graphData状态
+              // 更新graphData状态 - 现在包含集群信息
               setGraphData({
                 nodes: graphData.nodes || [],
-                edges: graphData.edges || []
+                edges: graphData.edges || [],
+                clusters: graphData.clusters || {},
+                metadata: graphData.metadata || {}
               });
               
-              setStatusMessage(`图谱生成完成！包含 ${graphData.nodes?.length || 0} 个节点和 ${graphData.edges?.length || 0} 个关系`);
+              const clusterCount = Object.keys(graphData.clusters || {}).length;
+              setStatusMessage(`图谱生成完成！包含 ${graphData.nodes?.length || 0} 个节点、${graphData.edges?.length || 0} 个关系，分为 ${clusterCount} 个集群`);
               setIsLoading(false);
               
             } catch (graphError) {
@@ -213,13 +217,13 @@ const AnalysisPage = () => {
       <div className="input-panel">
         <div className="panel-header">
           <h2>📝 文本输入</h2>
-          <p>输入您想要分析的文本内容，我们将为您生成知识图谱</p>
+          <p>输入您想要分析的文本内容，我们将为您生成集群化的知识图谱</p>
         </div>
 
         <div className="textarea-container">
           <textarea
             className="text-input"
-            placeholder="在此处粘贴您的长文本...&#10;&#10;例如：&#10;• 学术论文段落&#10;• 新闻文章&#10;• 技术文档&#10;• 企业介绍&#10;• 产品描述&#10;&#10;系统将自动提取关键概念并分析它们之间的关系。"
+            placeholder="在此处粘贴您的长文本...&#10;&#10;例如：&#10;• 学术论文段落&#10;• 新闻文章&#10;• 技术文档&#10;• 企业介绍&#10;• 产品描述&#10;&#10;系统将自动提取关键概念并按照语义相似性分为不同集群。"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             disabled={isLoading}
@@ -252,7 +256,7 @@ const AnalysisPage = () => {
             onClick={handleAnalysis}
             disabled={!inputText.trim() || isLoading}
           >
-            {isLoading ? '🔄 分析中...' : '🚀 生成知识图谱'}
+            {isLoading ? '🔄 分析中...' : '🚀 生成集群化图谱'}
           </button>
           
           {(taskId || error) && (
@@ -328,13 +332,15 @@ const AnalysisPage = () => {
       {/* 右侧图谱面板 */}
       <div className="graph-panel">
         <div className="panel-header">
-          <h2>🧠 知识图谱</h2>
+          <h2>🧠 集群化知识图谱</h2>
           <p>
             {/* 3. 条件渲染: 根据状态显示不同描述 */}
             {!isLoading && !error && !graphData && '分析结果将在此处展示'}
-            {isLoading && '正在构建知识图谱...'}
+            {isLoading && '正在构建集群化知识图谱...'}
             {error && '图谱生成失败'}
-            {graphData && !isLoading && !error && `图谱包含 ${graphData.nodes.length} 个概念节点`}
+            {graphData && !isLoading && !error && 
+              `图谱包含 ${graphData.nodes.length} 个概念节点，分为 ${Object.keys(graphData.clusters || {}).length} 个集群`
+            }
           </p>
         </div>
 
@@ -343,20 +349,20 @@ const AnalysisPage = () => {
           {!isLoading && !error && !graphData && (
             <div className="welcome-message">
               <div className="welcome-icon">🎯</div>
-              <h3>欢迎使用知识图谱分析系统</h3>
-              <p>在左侧输入文本，点击"生成知识图谱"开始分析</p>
+              <h3>欢迎使用集群化知识图谱分析系统</h3>
+              <p>在左侧输入文本，点击"生成集群化图谱"开始分析</p>
               <div className="features">
                 <div className="feature">
-                  <span className="feature-icon">🔍</span>
-                  <span>智能概念提取</span>
+                  <span className="feature-icon">🧩</span>
+                  <span>智能集群化显示</span>
                 </div>
                 <div className="feature">
-                  <span className="feature-icon">🔗</span>
-                  <span>关系识别分析</span>
+                  <span className="feature-icon">🔍</span>
+                  <span>语义相似性分析</span>
                 </div>
                 <div className="feature">
                   <span className="feature-icon">🎮</span>
-                  <span>3D交互式展示</span>
+                  <span>可切换显示模式</span>
                 </div>
               </div>
             </div>
@@ -374,48 +380,14 @@ const AnalysisPage = () => {
                 </div>
               )}
               <div style={{ marginTop: '20px', fontSize: '14px', color: '#888' }}>
-                💡 提示：分析过程包括文本预处理、概念提取、关系识别和图谱构建
+                💡 提示：系统正在进行语义分析和集群化处理
               </div>
             </div>
           )}
 
-          {/* 3. 条件渲染: 如果graphData有数据，渲染KnowledgeGraph组件 */}
+          {/* 3. 条件渲染: 如果graphData有数据，渲染集群化KnowledgeGraph组件 */}
           {graphData && graphData.nodes.length > 0 && !isLoading && !error && (
-            <div className="graph-canvas-container">
-              <GraphCanvas
-                nodes={graphData.nodes}
-                edges={graphData.edges}
-                layoutType="forceDirected3d"
-                cameraMode="orbit"
-                animated={true}
-                draggable={true}
-                theme={darkTheme}
-                sizingType="centrality"
-                labelType="all"
-                onNodeClick={(node) => {
-                  console.log('🎯 点击节点:', node);
-                }}
-                onNodeContextMenu={(node) => {
-                  const info = `节点: ${node.label}\nID: ${node.id}\n类型: ${node.type || 'concept'}`;
-                  if (node.source_sentence) {
-                    info += `\n来源: ${node.source_sentence}`;
-                  }
-                  alert(info);
-                }}
-                onCanvasClick={() => {
-                  console.log('🖱️ 点击画布');
-                }}
-              />
-              
-              {/* 图谱控制信息 */}
-              <div className="graph-controls-info">
-                <div className="control-tip">
-                  <span>🖱️ 左键拖拽旋转</span>
-                  <span>🔍 滚轮缩放</span>
-                  <span>👆 右键查看详情</span>
-                </div>
-              </div>
-            </div>
+            <KnowledgeGraph graphData={graphData} />
           )}
 
           {/* 3. 条件渲染: 错误状态 */}
