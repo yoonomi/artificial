@@ -3,12 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoGen 知识图谱分析平台 - 双栏布局</title>
+    <title>AutoGen 双栏知识图谱分析系统</title>
     <style>
-        /* ================================
-           双栏布局样式
-           ================================ */
-
         * {
             margin: 0;
             padding: 0;
@@ -16,162 +12,272 @@
         }
 
         body {
-            font-family: 'Microsoft YaHei', 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
             overflow: hidden;
         }
 
-        .analysis-page {
+        .analysis-container {
             display: flex;
-            width: 100vw;
             height: 100vh;
+            width: 100vw;
         }
 
-        /* ================================
-           左侧输入面板
-           ================================ */
-
+        /* 左侧输入面板 */
         .input-panel {
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: rgba(255, 255, 255, 0.95);
-            border-right: 2px solid rgba(42, 82, 152, 0.2);
+            padding: 24px;
+            border-right: 2px solid rgba(0, 212, 255, 0.2);
+            background: rgba(15, 15, 35, 0.6);
             backdrop-filter: blur(10px);
-        }
-
-        .panel-header {
-            padding: 25px 30px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            overflow-y: auto;
         }
 
         .panel-header h2 {
             margin: 0 0 8px 0;
             font-size: 24px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            color: #00D4FF;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
         }
 
         .panel-header p {
-            margin: 0;
+            margin: 0 0 24px 0;
+            color: #B0B0B0;
             font-size: 14px;
-            opacity: 0.9;
-            font-weight: 300;
-        }
-
-        .input-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 30px;
-            gap: 20px;
+            line-height: 1.5;
         }
 
         .text-input {
             flex: 1;
-            width: 100%;
-            padding: 20px;
-            border: 2px solid #e1e8ed;
+            min-height: 200px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(0, 212, 255, 0.3);
             border-radius: 12px;
-            font-size: 16px;
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            color: #ffffff;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
             line-height: 1.6;
-            resize: none;
-            background: #fafbfc;
+            resize: vertical;
             transition: all 0.3s ease;
-            outline: none;
+            margin-bottom: 16px;
         }
 
         .text-input:focus {
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: none;
+            border-color: rgba(0, 212, 255, 0.8);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
         }
 
-        .text-input::placeholder {
-            color: #8899a6;
-            font-style: italic;
+        .text-info {
+            margin-bottom: 20px;
+            text-align: right;
+            color: #888;
+            font-size: 12px;
         }
 
-        .input-controls {
+        .sample-buttons {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            border-top: 1px solid #e1e8ed;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
         }
 
-        .text-stats {
+        .sample-button {
+            padding: 8px 16px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 20px;
+            color: #00D4FF;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sample-button:hover {
+            background: rgba(0, 212, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .action-container {
             display: flex;
-            gap: 20px;
-            font-size: 14px;
-            color: #657786;
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
-        .control-buttons {
-            display: flex;
-            gap: 15px;
-        }
-
-        .clear-button, .analyze-button {
-            padding: 12px 24px;
+        .analyze-button {
+            flex: 1;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #00D4FF 0%, #0099CC 100%);
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
+            color: #ffffff;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-family: inherit;
-        }
-
-        .clear-button {
-            background: #f7f9fa;
-            color: #657786;
-            border: 1px solid #e1e8ed;
-        }
-
-        .clear-button:hover:not(:disabled) {
-            background: #e1e8ed;
-            transform: translateY(-1px);
-        }
-
-        .clear-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .analyze-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            min-width: 180px;
-            justify-content: center;
         }
 
         .analyze-button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #00E5FF 0%, #00B3E6 100%);
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
         }
 
         .analyze-button:disabled {
-            opacity: 0.7;
+            opacity: 0.6;
             cursor: not-allowed;
             transform: none;
         }
 
-        .loading-spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top: 2px solid white;
+        .reset-button {
+            padding: 16px 20px;
+            background: rgba(255, 107, 107, 0.2);
+            border: 2px solid rgba(255, 107, 107, 0.4);
+            border-radius: 12px;
+            color: #FF6B6B;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .reset-button:hover {
+            background: rgba(255, 107, 107, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .status-container {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: auto;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .status-indicator {
+            font-size: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.processing {
+            animation: spin 1s linear infinite;
+        }
+
+        .progress-container {
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00D4FF 0%, #00FF88 100%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            color: #00D4FF;
+            font-weight: 600;
+            font-size: 14px;
+            min-width: 40px;
+        }
+
+        /* 右侧图谱面板 */
+        .graph-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            background: rgba(10, 10, 20, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .graph-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(0, 212, 255, 0.2);
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 40px;
+            max-width: 400px;
+        }
+
+        .welcome-icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .processing-message {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 212, 255, 0.2);
+            border-left: 4px solid #00D4FF;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+
+        .api-status {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            font-size: 12px;
+            color: #B0B0B0;
+        }
+
+        .api-status.connected {
+            border-color: rgba(0, 255, 136, 0.3);
+            color: #00FF88;
+        }
+
+        .api-status.error {
+            border-color: rgba(255, 107, 107, 0.3);
+            color: #FF6B6B;
+        }
+
+        /* 动画 */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         @keyframes spin {
@@ -179,343 +285,90 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* ================================
-           右侧图谱面板
-           ================================ */
-
-        .graph-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            backdrop-filter: blur(10px);
-        }
-
-        .graph-panel .panel-header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        }
-
-        .graph-section {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            position: relative;
-        }
-
-        /* ================================
-           欢迎状态
-           ================================ */
-
-        .welcome-state {
-            text-align: center;
-            max-width: 500px;
-        }
-
-        .welcome-icon {
-            font-size: 80px;
-            margin-bottom: 30px;
-            animation: float 3s ease-in-out infinite;
-        }
-
         @keyframes float {
             0%, 100% { transform: translateY(0px); }
             50% { transform: translateY(-10px); }
         }
 
-        .welcome-state h3 {
-            font-size: 28px;
-            margin: 0 0 15px 0;
-            font-weight: 300;
-            color: #e1e8ed;
-        }
-
-        .welcome-state p {
-            font-size: 16px;
-            color: #8899a6;
-            margin: 0 0 40px 0;
-            line-height: 1.6;
-        }
-
-        .feature-list {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .feature-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .feature-icon {
-            font-size: 20px;
-        }
-
-        /* ================================
-           分析状态
-           ================================ */
-
-        .analysis-state {
-            text-align: center;
-            max-width: 600px;
-        }
-
-        .analyzing-state h3 {
-            font-size: 24px;
-            margin: 30px 0 15px 0;
-            color: #e1e8ed;
-        }
-
-        .analysis-status {
-            font-size: 16px;
-            color: #8899a6;
-            margin: 0 0 40px 0;
-        }
-
-        .analysis-spinner {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
-
-        .spinner-ring {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(102, 126, 234, 0.2);
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        .spinner-ring:nth-child(2) {
-            animation-delay: -0.3s;
-        }
-
-        .spinner-ring:nth-child(3) {
-            animation-delay: -0.6s;
-        }
-
-        .analysis-steps {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 30px;
-            margin-top: 40px;
-        }
-
-        .step {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: #657786;
-            transition: all 0.3s ease;
-        }
-
-        .step.active {
-            color: #667eea;
-        }
-
-        .step-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #657786;
-            transition: all 0.3s ease;
-        }
-
-        .step.active .step-dot {
-            background: #667eea;
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
-        }
-
-        /* ================================
-           完成状态
-           ================================ */
-
-        .completed-state {
-            text-align: center;
-        }
-
-        .success-icon {
-            font-size: 80px;
-            margin-bottom: 30px;
-            animation: bounce 1s ease-in-out;
-        }
-
-        @keyframes bounce {
-            0%, 20%, 60%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-20px); }
-            80% { transform: translateY(-10px); }
-        }
-
-        .completed-state h3 {
-            font-size: 28px;
-            margin: 0 0 15px 0;
-            color: #4caf50;
-        }
-
-        .completed-state p {
-            font-size: 16px;
-            color: #8899a6;
-            margin: 0;
-        }
-
-        /* ================================
-           API状态指示器
-           ================================ */
-
-        .api-status {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .api-status.connected {
-            background: rgba(76, 175, 80, 0.2);
-            color: #4caf50;
-            border: 1px solid rgba(76, 175, 80, 0.3);
-        }
-
-        .api-status.disconnected {
-            background: rgba(244, 67, 54, 0.2);
-            color: #f44336;
-            border: 1px solid rgba(244, 67, 54, 0.3);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* ================================
-           响应式设计
-           ================================ */
-
+        /* 响应式 */
         @media (max-width: 1024px) {
-            .analysis-page {
+            .analysis-container {
                 flex-direction: column;
             }
             
-            .input-panel, .graph-panel {
+            .input-panel,
+            .graph-panel {
                 flex: none;
-                height: 50vh;
+                min-height: 50vh;
             }
             
-            .feature-list {
-                grid-template-columns: 1fr;
-            }
-            
-            .analysis-steps {
-                flex-wrap: wrap;
-                gap: 20px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .panel-header {
-                padding: 20px;
-            }
-            
-            .input-section {
-                padding: 20px;
-            }
-            
-            .panel-header h2 {
-                font-size: 20px;
-            }
-            
-            .text-input {
-                padding: 15px;
-                font-size: 14px;
-            }
-            
-            .control-buttons {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .analyze-button {
-                min-width: auto;
-                width: 100%;
+            .input-panel {
+                border-right: none;
+                border-bottom: 2px solid rgba(0, 212, 255, 0.2);
             }
         }
     </style>
 </head>
 <body>
-    <div class="analysis-page">
+    <div class="analysis-container">
         <!-- 左侧输入面板 -->
         <div class="input-panel">
             <div class="panel-header">
                 <h2>📝 文本输入</h2>
-                <p>粘贴或输入您要分析的文本内容</p>
+                <p>输入您想要分析的文本内容，我们将为您生成知识图谱</p>
             </div>
-            
-            <div class="input-section">
-                <textarea
-                    id="textInput"
-                    class="text-input"
-                    placeholder="在此处粘贴您的长文本...
+
+            <textarea 
+                id="textInput" 
+                class="text-input" 
+                placeholder="在此处粘贴您的长文本...
 
 例如：
-人工智能（Artificial Intelligence, AI）是计算机科学的一个分支，旨在创建能够执行通常需要人类智能的任务的系统。机器学习是人工智能的一个重要子领域，通过算法让计算机从数据中学习。深度学习是机器学习的一个分支，使用神经网络来模拟人脑的工作方式。
+• 学术论文段落
+• 新闻文章  
+• 技术文档
+• 企业介绍
+• 产品描述
 
-支持中英文文本分析，自动提取关键概念和关系。"
-                    rows="12"
-                ></textarea>
+系统将自动提取关键概念并分析它们之间的关系。"
+            ></textarea>
+
+            <div class="text-info">
+                字符数: <span id="charCount">0</span> / 50000
+            </div>
+
+            <div class="sample-buttons">
+                <button class="sample-button" onclick="useSampleText('ai')">人工智能基础</button>
+                <button class="sample-button" onclick="useSampleText('tech')">科技发展</button>
+                <button class="sample-button" onclick="useSampleText('business')">企业管理</button>
+            </div>
+
+            <div class="action-container">
+                <button class="analyze-button" id="analyzeBtn" onclick="startAnalysis()">
+                    🚀 生成知识图谱
+                </button>
+                <button class="reset-button" id="resetBtn" onclick="resetAnalysis()" style="display: none;">
+                    🔄 重新开始
+                </button>
+            </div>
+
+            <div class="status-container" id="statusContainer" style="display: none;">
+                <div class="status-header">
+                    <span class="status-indicator" id="statusIndicator">⏳</span>
+                    <span class="status-text" id="statusText">准备中</span>
+                </div>
                 
-                <div class="input-controls">
-                    <div class="text-stats">
-                        <span class="char-count">
-                            字符数: <span id="charCount">0</span>
-                        </span>
-                        <span class="word-count">
-                            词数: <span id="wordCount">0</span>
-                        </span>
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
                     </div>
-                    
-                    <div class="control-buttons">
-                        <button class="clear-button" id="clearButton" disabled>
-                            🗑️ 清空
-                        </button>
-                        
-                        <button class="analyze-button" id="analyzeButton" disabled>
-                            🧠 生成知识图谱
-                        </button>
-                    </div>
+                    <div class="progress-text" id="progressText">0%</div>
+                </div>
+                
+                <div class="status-message" id="statusMessage"></div>
+                
+                <div class="task-info" id="taskInfo" style="display: none;">
+                    任务ID: <code id="taskId"></code>
                 </div>
             </div>
         </div>
@@ -523,334 +376,338 @@
         <!-- 右侧图谱面板 -->
         <div class="graph-panel">
             <div class="panel-header">
-                <h2>🌐 知识图谱</h2>
-                <p>分析结果的3D可视化展示</p>
+                <h2>🧠 知识图谱</h2>
+                <p id="graphDescription">分析结果将在此处展示</p>
             </div>
-            
-            <div class="graph-section">
-                <!-- API状态指示器 -->
-                <div class="api-status disconnected" id="apiStatus">
-                    <div class="status-dot"></div>
-                    <span>检查API连接中...</span>
-                </div>
 
-                <!-- 欢迎状态 -->
-                <div class="welcome-state" id="welcomeState">
+            <div class="graph-container" id="graphContainer">
+                <div class="welcome-message" id="welcomeMessage">
                     <div class="welcome-icon">🎯</div>
-                    <h3>分析结果将在此处展示</h3>
-                    <p>请在左侧输入文本，点击"生成知识图谱"开始分析</p>
-                    
-                    <div class="feature-list">
-                        <div class="feature-item">
-                            <span class="feature-icon">🔍</span>
-                            <span>智能关键词提取</span>
+                    <h3>欢迎使用知识图谱分析系统</h3>
+                    <p>在左侧输入文本，点击"生成知识图谱"开始分析</p>
+                    <div style="margin-top: 32px;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin: 16px 0; padding: 12px; background: rgba(0, 212, 255, 0.1); border-radius: 8px;">
+                            <span style="font-size: 24px;">🔍</span>
+                            <span>智能概念提取</span>
                         </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">🔗</span>
-                            <span>自动关系识别</span>
+                        <div style="display: flex; align-items: center; gap: 12px; margin: 16px 0; padding: 12px; background: rgba(0, 212, 255, 0.1); border-radius: 8px;">
+                            <span style="font-size: 24px;">🔗</span>
+                            <span>关系识别分析</span>
                         </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">🎨</span>
-                            <span>3D交互式可视化</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">📊</span>
-                            <span>动态布局切换</span>
+                        <div style="display: flex; align-items: center; gap: 12px; margin: 16px 0; padding: 12px; background: rgba(0, 212, 255, 0.1); border-radius: 8px;">
+                            <span style="font-size: 24px;">🎮</span>
+                            <span>实时状态更新</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- 分析状态 -->
-                <div class="analysis-state" id="analysisState" style="display: none;">
-                    <!-- 分析中状态 -->
-                    <div class="analyzing-state" id="analyzingState">
-                        <div class="analysis-spinner">
-                            <div class="spinner-ring"></div>
-                            <div class="spinner-ring"></div>
-                            <div class="spinner-ring"></div>
-                        </div>
-                        <h3>正在分析您的文本...</h3>
-                        <p class="analysis-status" id="analysisStatusText">开始分析...</p>
-                        
-                        <div class="analysis-steps">
-                            <div class="step" id="step1">
-                                <div class="step-dot"></div>
-                                <span>文本预处理</span>
-                            </div>
-                            <div class="step" id="step2">
-                                <div class="step-dot"></div>
-                                <span>关键词提取</span>
-                            </div>
-                            <div class="step" id="step3">
-                                <div class="step-dot"></div>
-                                <span>关系识别</span>
-                            </div>
-                            <div class="step" id="step4">
-                                <div class="step-dot"></div>
-                                <span>图谱构建</span>
-                            </div>
-                        </div>
-                    </div>
+                <div class="processing-message" id="processingMessage" style="display: none;">
+                    <div class="spinner"></div>
+                    <h3>正在生成知识图谱</h3>
+                    <p id="processingText">正在处理您的文本...</p>
+                </div>
 
-                    <!-- 完成状态 -->
-                    <div class="completed-state" id="completedState" style="display: none;">
-                        <div class="success-icon">✅</div>
-                        <h3>分析完成</h3>
-                        <p id="resultSummary">知识图谱已生成，包含 X 个节点和 Y 个关系</p>
-                        <!-- 这里将来会放置3D图谱组件 -->
+                <div id="completedMessage" style="display: none; text-align: center; padding: 40px;">
+                    <div style="font-size: 64px; margin-bottom: 24px;">✅</div>
+                    <h3 style="color: #00FF88; margin-bottom: 16px;">图谱生成完成！</h3>
+                    <p id="resultSummary" style="color: #B0B0B0;"></p>
+                    <div style="margin-top: 24px; padding: 16px; background: rgba(0, 255, 136, 0.1); border-radius: 12px;">
+                        <p style="font-size: 14px; color: #00FF88;">
+                            💡 在实际应用中，这里会显示交互式的3D知识图谱<br>
+                            使用React + Reagraph组件实现完整的图谱可视化
+                        </p>
                     </div>
                 </div>
+
+                <div id="errorMessage" style="display: none; text-align: center; padding: 40px;">
+                    <div style="font-size: 64px; margin-bottom: 24px;">⚠️</div>
+                    <h3 style="color: #FF6B6B; margin-bottom: 16px;">图谱生成失败</h3>
+                    <p id="errorText" style="color: #B0B0B0; margin-bottom: 24px;"></p>
+                    <button class="reset-button" onclick="resetAnalysis()">🔄 重试</button>
+                </div>
+            </div>
+
+            <div class="api-status" id="apiStatus">
+                🔌 检查API连接...
             </div>
         </div>
     </div>
 
     <script>
-        // ================================
         // 全局变量
-        // ================================
-        
-        const API_BASE_URL = 'http://localhost:8000';
         let currentTaskId = null;
-        let isAnalyzing = false;
+        let statusCheckInterval = null;
+        const API_BASE_URL = 'http://localhost:8000';
 
-        // DOM元素
-        const textInput = document.getElementById('textInput');
-        const charCount = document.getElementById('charCount');
-        const wordCount = document.getElementById('wordCount');
-        const clearButton = document.getElementById('clearButton');
-        const analyzeButton = document.getElementById('analyzeButton');
-        const apiStatus = document.getElementById('apiStatus');
-        const welcomeState = document.getElementById('welcomeState');
-        const analysisState = document.getElementById('analysisState');
-        const analyzingState = document.getElementById('analyzingState');
-        const completedState = document.getElementById('completedState');
-        const analysisStatusText = document.getElementById('analysisStatusText');
-        const resultSummary = document.getElementById('resultSummary');
+        // 示例文本
+        const sampleTexts = {
+            ai: "人工智能（Artificial Intelligence, AI）是计算机科学的一个分支，旨在创建能够执行通常需要人类智能的任务的系统。机器学习是人工智能的一个重要子领域，通过算法让计算机从数据中学习。深度学习是机器学习的一个分支，使用神经网络来模拟人脑的工作方式。",
+            tech: "OpenAI是一家专注于人工智能研究的公司，开发了GPT系列模型。GPT是生成式预训练Transformer模型，能够理解和生成自然语言文本。ChatGPT基于GPT模型，专门针对对话场景进行了优化。",
+            business: "企业管理包括战略规划、组织结构、人力资源管理、财务管理、市场营销等多个方面。现代企业需要建立完善的管理体系，通过科学的管理方法提高效率和竞争力。"
+        };
 
-        // ================================
         // 初始化
-        // ================================
-
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 初始化AutoGen知识图谱分析平台');
+            // 字符计数
+            const textInput = document.getElementById('textInput');
+            const charCount = document.getElementById('charCount');
             
-            // 绑定事件监听器
-            textInput.addEventListener('input', updateTextStats);
-            clearButton.addEventListener('click', clearText);
-            analyzeButton.addEventListener('click', startAnalysis);
-            
+            textInput.addEventListener('input', function() {
+                charCount.textContent = this.value.length;
+            });
+
             // 检查API连接
-            checkAPIConnection();
-            
-            // 更新初始状态
-            updateTextStats();
+            checkApiConnection();
         });
 
-        // ================================
-        // 文本处理函数
-        // ================================
-
-        function updateTextStats() {
-            const text = textInput.value;
-            const charLength = text.length;
-            const wordLength = text.trim() ? text.trim().split(/\s+/).length : 0;
-            
-            charCount.textContent = charLength;
-            wordCount.textContent = wordLength;
-            
-            // 更新按钮状态
-            const hasText = text.trim().length > 0;
-            clearButton.disabled = !hasText;
-            analyzeButton.disabled = !hasText || isAnalyzing;
+        // 使用示例文本
+        function useSampleText(type) {
+            const textInput = document.getElementById('textInput');
+            textInput.value = sampleTexts[type];
+            document.getElementById('charCount').textContent = textInput.value.length;
+            resetAnalysis();
         }
 
-        function clearText() {
-            textInput.value = '';
-            updateTextStats();
+        // 检查API连接
+        async function checkApiConnection() {
+            const apiStatus = document.getElementById('apiStatus');
             
-            // 重置右侧面板
-            resetAnalysisPanel();
-        }
-
-        function resetAnalysisPanel() {
-            welcomeState.style.display = 'block';
-            analysisState.style.display = 'none';
-            currentTaskId = null;
-        }
-
-        // ================================
-        // API通信函数
-        // ================================
-
-        async function checkAPIConnection() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/health`);
                 if (response.ok) {
+                    const data = await response.json();
+                    apiStatus.innerHTML = '🟢 API服务正常';
                     apiStatus.className = 'api-status connected';
-                    apiStatus.innerHTML = '<div class="status-dot"></div><span>API已连接</span>';
-                    console.log('✅ API连接成功');
                 } else {
                     throw new Error('API响应异常');
                 }
             } catch (error) {
-                apiStatus.className = 'api-status disconnected';
-                apiStatus.innerHTML = '<div class="status-dot"></div><span>API连接失败</span>';
-                console.log('❌ API连接失败:', error);
+                apiStatus.innerHTML = '🔴 API服务离线';
+                apiStatus.className = 'api-status error';
+                console.warn('API连接失败:', error);
             }
         }
 
+        // 启动分析
         async function startAnalysis() {
+            const textInput = document.getElementById('textInput');
             const text = textInput.value.trim();
-            if (!text || isAnalyzing) return;
-
-            console.log('🧠 开始文本分析...');
             
-            isAnalyzing = true;
-            analyzeButton.disabled = true;
-            analyzeButton.innerHTML = '<div class="loading-spinner"></div> 分析中...';
-            
-            // 切换到分析状态
-            welcomeState.style.display = 'none';
-            analysisState.style.display = 'block';
-            completedState.style.display = 'none';
-            analyzingState.style.display = 'block';
+            if (!text) {
+                alert('请输入要分析的文本');
+                return;
+            }
 
             try {
-                // 1. 启动分析任务
-                const startResponse = await fetch(`${API_BASE_URL}/api/start-analysis`, {
+                // 更新UI状态
+                showStatus('pending', '准备中', '正在创建分析任务...');
+                document.getElementById('analyzeBtn').disabled = true;
+                document.getElementById('resetBtn').style.display = 'inline-block';
+                
+                console.log('开始分析，文本长度:', text.length);
+
+                // 调用API
+                const response = await fetch(`${API_BASE_URL}/api/start-analysis`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ text: text })
                 });
 
-                if (!startResponse.ok) {
-                    throw new Error('启动分析失败');
-                }
-
-                const startData = await startResponse.json();
-                currentTaskId = startData.task_id;
-                console.log('📝 任务已创建:', currentTaskId);
-
-                // 2. 轮询任务状态
-                await pollTaskStatus();
-
-            } catch (error) {
-                console.error('❌ 分析失败:', error);
-                analysisStatusText.textContent = '分析失败，请重试';
-                resetAnalysisControls();
-            }
-        }
-
-        async function pollTaskStatus() {
-            if (!currentTaskId) return;
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/analysis-status/${currentTaskId}`);
                 if (!response.ok) {
-                    throw new Error('获取任务状态失败');
+                    throw new Error(`API请求失败: ${response.status}`);
                 }
 
                 const data = await response.json();
-                console.log('📊 任务状态:', data);
-
-                // 更新状态显示
-                analysisStatusText.textContent = data.message || '处理中...';
-                updateProgressSteps(data.progress || 0);
-
-                if (data.status === 'COMPLETED') {
-                    console.log('✅ 分析完成');
-                    await showResults();
-                } else if (data.status === 'FAILED') {
-                    throw new Error(data.error || '分析失败');
-                } else if (data.status === 'PROCESSING' || data.status === 'PENDING') {
-                    // 继续轮询
-                    setTimeout(pollTaskStatus, 1000);
-                } else {
-                    throw new Error('未知任务状态: ' + data.status);
-                }
-
+                console.log('任务创建成功:', data);
+                
+                currentTaskId = data.task_id;
+                showTaskInfo(currentTaskId);
+                
+                // 开始轮询状态
+                pollTaskStatus();
+                
             } catch (error) {
-                console.error('❌ 轮询状态失败:', error);
-                analysisStatusText.textContent = '获取状态失败，请重试';
-                resetAnalysisControls();
+                console.error('启动分析失败:', error);
+                showError(`分析启动失败: ${error.message}`);
+                document.getElementById('analyzeBtn').disabled = false;
             }
         }
 
-        async function showResults() {
+        // 轮询任务状态
+        function pollTaskStatus() {
             if (!currentTaskId) return;
+            
+            statusCheckInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/analysis-status/${currentTaskId}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`状态查询失败: ${response.status}`);
+                    }
 
+                    const statusData = await response.json();
+                    console.log('状态更新:', statusData);
+                    
+                    updateProgress(statusData.progress || 0);
+                    updateStatusMessage(statusData.message || '');
+
+                    if (statusData.status === 'COMPLETED') {
+                        clearInterval(statusCheckInterval);
+                        showCompleted();
+                        fetchGraphData();
+                    } else if (statusData.status === 'FAILED') {
+                        clearInterval(statusCheckInterval);
+                        showError(`分析失败: ${statusData.error || '未知错误'}`);
+                    } else if (statusData.status === 'PROCESSING') {
+                        showStatus('processing', '处理中', statusData.message || '正在处理...');
+                    }
+                    
+                } catch (error) {
+                    console.error('状态查询失败:', error);
+                    clearInterval(statusCheckInterval);
+                    showError(`状态查询失败: ${error.message}`);
+                }
+            }, 2000);
+        }
+
+        // 获取图谱数据
+        async function fetchGraphData() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/graph-data/${currentTaskId}`);
+                
                 if (!response.ok) {
-                    throw new Error('获取图谱数据失败');
+                    throw new Error(`图谱数据获取失败: ${response.status}`);
                 }
 
                 const data = await response.json();
-                console.log('📈 图谱数据:', data);
-
+                console.log('图谱数据获取成功:', data);
+                
                 // 显示结果摘要
-                const nodeCount = data.nodes ? data.nodes.length : 0;
-                const edgeCount = data.edges ? data.edges.length : 0;
-                resultSummary.textContent = `知识图谱已生成，包含 ${nodeCount} 个节点和 ${edgeCount} 个关系`;
-
-                // 切换到完成状态
-                analyzingState.style.display = 'none';
-                completedState.style.display = 'block';
-
-                // 重置控制按钮
-                resetAnalysisControls();
-
-                console.log('🎉 分析流程完成');
-
+                const nodeCount = data.nodes?.length || 0;
+                const edgeCount = data.edges?.length || 0;
+                document.getElementById('resultSummary').textContent = 
+                    `成功生成包含 ${nodeCount} 个概念节点和 ${edgeCount} 个关系的知识图谱`;
+                
+                document.getElementById('graphDescription').textContent = 
+                    `图谱包含 ${nodeCount} 个概念节点`;
+                
             } catch (error) {
-                console.error('❌ 获取结果失败:', error);
-                analysisStatusText.textContent = '获取结果失败，请重试';
-                resetAnalysisControls();
+                console.error('图谱数据获取失败:', error);
+                showError(`图谱数据获取失败: ${error.message}`);
             }
         }
 
-        function updateProgressSteps(progress) {
-            const steps = ['step1', 'step2', 'step3', 'step4'];
-            const stepThresholds = [25, 50, 75, 100];
-
-            steps.forEach((stepId, index) => {
-                const stepElement = document.getElementById(stepId);
-                if (progress >= stepThresholds[index]) {
-                    stepElement.classList.add('active');
-                } else {
-                    stepElement.classList.remove('active');
-                }
-            });
+        // UI状态管理
+        function showStatus(status, statusText, message) {
+            const container = document.getElementById('statusContainer');
+            const indicator = document.getElementById('statusIndicator');
+            const text = document.getElementById('statusText');
+            const messageEl = document.getElementById('statusMessage');
+            
+            container.style.display = 'block';
+            
+            // 状态图标
+            const icons = {
+                pending: '⏳',
+                processing: '⚙️',
+                completed: '✅',
+                failed: '❌'
+            };
+            
+            indicator.textContent = icons[status] || '⏳';
+            indicator.className = `status-indicator ${status}`;
+            text.textContent = statusText;
+            messageEl.textContent = message;
+            
+            // 显示进度条
+            if (status === 'processing') {
+                document.getElementById('progressContainer').style.display = 'flex';
+                showProcessing();
+            } else {
+                document.getElementById('progressContainer').style.display = 'none';
+            }
         }
 
-        function resetAnalysisControls() {
-            isAnalyzing = false;
-            analyzeButton.innerHTML = '🧠 生成知识图谱';
-            updateTextStats(); // 这会重新设置按钮状态
+        function showProcessing() {
+            document.getElementById('welcomeMessage').style.display = 'none';
+            document.getElementById('processingMessage').style.display = 'block';
+            document.getElementById('completedMessage').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            document.getElementById('graphDescription').textContent = '正在构建知识图谱...';
         }
 
-        // ================================
-        // 错误处理
-        // ================================
+        function showCompleted() {
+            document.getElementById('welcomeMessage').style.display = 'none';
+            document.getElementById('processingMessage').style.display = 'none';
+            document.getElementById('completedMessage').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            showStatus('completed', '已完成', '知识图谱生成完成！');
+            document.getElementById('analyzeBtn').disabled = false;
+        }
 
-        window.addEventListener('error', function(e) {
-            console.error('🚨 页面错误:', e.error);
-        });
+        function showError(message) {
+            document.getElementById('welcomeMessage').style.display = 'none';
+            document.getElementById('processingMessage').style.display = 'none';
+            document.getElementById('completedMessage').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'block';
+            
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('graphDescription').textContent = '图谱生成失败';
+            
+            showStatus('failed', '失败', message);
+            document.getElementById('analyzeBtn').disabled = false;
+        }
 
-        // ================================
-        // 页面加载完成提示
-        // ================================
+        function updateProgress(progress) {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressFill.style.width = `${progress}%`;
+            progressText.textContent = `${progress}%`;
+        }
 
-        window.addEventListener('load', function() {
-            console.log('🎯 AutoGen知识图谱分析平台已加载完成');
-            console.log('📖 使用说明:');
-            console.log('   1. 在左侧输入框中粘贴或输入文本');
-            console.log('   2. 点击"生成知识图谱"按钮开始分析');
-            console.log('   3. 右侧将显示分析进度和结果');
-            console.log('   4. 完成后可查看3D知识图谱可视化');
-        });
+        function updateStatusMessage(message) {
+            document.getElementById('statusMessage').textContent = message;
+            document.getElementById('processingText').textContent = message;
+        }
+
+        function showTaskInfo(taskId) {
+            const taskInfo = document.getElementById('taskInfo');
+            const taskIdEl = document.getElementById('taskId');
+            
+            taskInfo.style.display = 'block';
+            taskIdEl.textContent = taskId.slice(0, 8) + '...';
+        }
+
+        // 重置分析
+        function resetAnalysis() {
+            // 清理状态
+            currentTaskId = null;
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+            
+            // 重置UI
+            document.getElementById('statusContainer').style.display = 'none';
+            document.getElementById('taskInfo').style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
+            document.getElementById('analyzeBtn').disabled = false;
+            
+            // 重置图谱面板
+            document.getElementById('welcomeMessage').style.display = 'block';
+            document.getElementById('processingMessage').style.display = 'none';
+            document.getElementById('completedMessage').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            document.getElementById('graphDescription').textContent = '分析结果将在此处展示';
+            
+            console.log('分析已重置');
+        }
     </script>
 </body>
 </html> 

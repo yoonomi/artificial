@@ -524,7 +524,7 @@ async def get_graph_data(task_id: str):
 @app.get("/")
 async def root():
     """根路径，返回API信息"""
-    return {
+        return {
         "message": "AutoGen 知识图谱API服务",
         "version": "1.0.0",
         "status": "running",
@@ -545,7 +545,7 @@ async def health_check():
 @app.get("/api/tasks")
 async def list_tasks():
     """列出所有任务（调试用）"""
-    return {
+            return {
         "tasks": list(task_manager.tasks.keys()),
         "total": len(task_manager.tasks)
     }

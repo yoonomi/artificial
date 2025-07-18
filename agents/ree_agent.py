@@ -11,13 +11,13 @@ from typing import Dict, List, Any, Optional
 def create_ree_agent(llm_config: Dict[str, Any], entities_json: str, relationship_types: List[str]) -> autogen.AssistantAgent:
     """
     创建关系与事件抽取智能体
-    
-    Args:
+        
+        Args:
         llm_config: LLM配置字典
         entities_json: 已识别的实体列表JSON字符串
         relationship_types: 关系类型列表
         
-    Returns:
+        Returns:
         配置好的关系抽取智能体
     """
     

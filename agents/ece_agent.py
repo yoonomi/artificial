@@ -11,12 +11,12 @@ from typing import Dict, List, Any, Optional
 def create_ece_agent(llm_config: Dict[str, Any], ontology_json: str) -> autogen.AssistantAgent:
     """
     创建实体与概念抽取智能体
-    
-    Args:
+        
+        Args:
         llm_config: LLM配置字典
         ontology_json: 本体论JSON字符串
-        
-    Returns:
+            
+        Returns:
         配置好的实体抽取智能体
     """
     

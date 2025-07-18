@@ -3,43 +3,54 @@ import { GraphCanvas, darkTheme } from 'reagraph';
 import './AnalysisPage.css';
 
 const AnalysisPage = () => {
-  // 状态管理
+  // 按照要求的状态管理结构
   const [inputText, setInputText] = useState('');
+  const [graphData, setGraphData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // 额外的状态管理用于增强用户体验
   const [taskId, setTaskId] = useState(null);
-  const [analysisStatus, setAnalysisStatus] = useState('idle'); // idle, pending, processing, completed, failed
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
-  const [graphData, setGraphData] = useState({ nodes: [], edges: [] });
-  const [isLoading, setIsLoading] = useState(false);
+  const [currentInterval, setCurrentInterval] = useState(null);
 
   // API基础URL
   const API_BASE_URL = 'http://localhost:8000';
 
-  // 清理状态
-  const resetAnalysis = () => {
-    setTaskId(null);
-    setAnalysisStatus('idle');
-    setProgress(0);
-    setStatusMessage('');
-    setGraphData({ nodes: [], edges: [] });
-    setIsLoading(false);
+  // 清理轮询定时器
+  const clearPolling = () => {
+    if (currentInterval) {
+      clearInterval(currentInterval);
+      setCurrentInterval(null);
+    }
   };
 
-  // 启动文本分析
-  const startAnalysis = async () => {
+  // 组件卸载时清理定时器
+  useEffect(() => {
+    return () => {
+      clearPolling();
+    };
+  }, []);
+
+  // 主要的分析处理函数 - 按照要求命名为 handleAnalysis
+  const handleAnalysis = async () => {
     if (!inputText.trim()) {
-      alert('请输入要分析的文本');
+      setError('请输入要分析的文本');
       return;
     }
 
     try {
+      // a. 设置loading状态，清空旧数据
       setIsLoading(true);
-      setAnalysisStatus('pending');
+      setGraphData(null);
+      setError(null);
+      setProgress(0);
       setStatusMessage('正在创建分析任务...');
       
-      console.log('开始分析，文本长度:', inputText.length);
+      console.log('🚀 开始分析，文本长度:', inputText.length);
 
-      // 调用启动分析API
+      // b. 向后端发送POST请求启动分析
       const response = await fetch(`${API_BASE_URL}/api/start-analysis`, {
         method: 'POST',
         headers: {
@@ -51,108 +62,120 @@ const AnalysisPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`API请求失败: ${response.status}`);
+        throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
       }
 
+      // c. 获取task_id
       const data = await response.json();
-      console.log('任务创建成功:', data);
-      
-      setTaskId(data.task_id);
-      setAnalysisStatus('processing');
+      const currentTaskId = data.task_id;
+      setTaskId(currentTaskId);
       setStatusMessage('任务已创建，开始处理...');
       
-    } catch (error) {
-      console.error('启动分析失败:', error);
-      setAnalysisStatus('failed');
-      setStatusMessage(`分析启动失败: ${error.message}`);
-      setIsLoading(false);
-    }
-  };
+      console.log('📝 任务创建成功，ID:', currentTaskId);
 
-  // 轮询任务状态
-  useEffect(() => {
-    if (!taskId || analysisStatus !== 'processing') return;
+      // d. 设置定时器，每3秒轮询状态
+      const intervalId = setInterval(async () => {
+        try {
+          console.log('🔄 轮询任务状态...');
+          const statusResponse = await fetch(`${API_BASE_URL}/api/analysis-status/${currentTaskId}`);
+          
+          if (!statusResponse.ok) {
+            throw new Error(`状态查询失败: ${statusResponse.status}`);
+          }
 
-    const pollStatus = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/analysis-status/${taskId}`);
-        
-        if (!response.ok) {
-          throw new Error(`状态查询失败: ${response.status}`);
-        }
+          const statusData = await statusResponse.json();
+          console.log('📊 状态更新:', statusData);
+          
+          // 更新进度和消息
+          setProgress(statusData.progress || 0);
+          setStatusMessage(statusData.message || '处理中...');
 
-        const statusData = await response.json();
-        console.log('状态更新:', statusData);
-        
-        setProgress(statusData.progress || 0);
-        setStatusMessage(statusData.message || '');
+          // e. 检查是否完成
+          if (statusData.status === 'COMPLETED') {
+            console.log('✅ 分析完成，开始获取图谱数据');
+            clearInterval(intervalId);
+            setCurrentInterval(null);
+            
+            // 向 /api/graph-data/{task_id} 发送GET请求
+            try {
+              setStatusMessage('分析完成，正在获取图谱数据...');
+              const graphResponse = await fetch(`${API_BASE_URL}/api/graph-data/${currentTaskId}`);
+              
+              if (!graphResponse.ok) {
+                throw new Error(`图谱数据获取失败: ${graphResponse.status}`);
+              }
 
-        if (statusData.status === 'COMPLETED') {
-          setAnalysisStatus('completed');
-          setStatusMessage('分析完成，正在获取图谱数据...');
-          // 获取图谱数据
-          await fetchGraphData(taskId);
-        } else if (statusData.status === 'FAILED') {
-          setAnalysisStatus('failed');
-          setStatusMessage(`分析失败: ${statusData.error || '未知错误'}`);
+              const graphData = await graphResponse.json();
+              console.log('📈 图谱数据获取成功:', graphData);
+              
+              // 更新graphData状态
+              setGraphData({
+                nodes: graphData.nodes || [],
+                edges: graphData.edges || []
+              });
+              
+              setStatusMessage(`图谱生成完成！包含 ${graphData.nodes?.length || 0} 个节点和 ${graphData.edges?.length || 0} 个关系`);
+              setIsLoading(false);
+              
+            } catch (graphError) {
+              console.error('❌ 获取图谱数据失败:', graphError);
+              setError(`获取图谱数据失败: ${graphError.message}`);
+              setIsLoading(false);
+            }
+            
+          } else if (statusData.status === 'FAILED') {
+            // f. 处理失败状态
+            console.error('❌ 分析失败:', statusData.error);
+            clearInterval(intervalId);
+            setCurrentInterval(null);
+            setError(`分析失败: ${statusData.error || '未知错误'}`);
+            setIsLoading(false);
+          }
+          
+        } catch (pollError) {
+          console.error('❌ 轮询失败:', pollError);
+          clearInterval(intervalId);
+          setCurrentInterval(null);
+          setError(`状态查询失败: ${pollError.message}`);
           setIsLoading(false);
         }
-        
-      } catch (error) {
-        console.error('状态查询失败:', error);
-        setAnalysisStatus('failed');
-        setStatusMessage(`状态查询失败: ${error.message}`);
-        setIsLoading(false);
-      }
-    };
-
-    // 立即查询一次，然后每2秒查询一次
-    pollStatus();
-    const interval = setInterval(pollStatus, 2000);
-
-    return () => clearInterval(interval);
-  }, [taskId, analysisStatus]);
-
-  // 获取图谱数据
-  const fetchGraphData = async (currentTaskId) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/graph-data/${currentTaskId}`);
+      }, 3000); // 每3秒轮询一次
       
-      if (!response.ok) {
-        throw new Error(`图谱数据获取失败: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('图谱数据获取成功:', data);
-      
-      setGraphData({
-        nodes: data.nodes || [],
-        edges: data.edges || []
-      });
-      
-      setStatusMessage(`图谱生成完成！包含 ${data.nodes?.length || 0} 个节点和 ${data.edges?.length || 0} 个关系`);
-      setIsLoading(false);
+      setCurrentInterval(intervalId);
       
     } catch (error) {
-      console.error('图谱数据获取失败:', error);
-      setStatusMessage(`图谱数据获取失败: ${error.message}`);
+      console.error('❌ 启动分析失败:', error);
+      setError(`启动分析失败: ${error.message}`);
       setIsLoading(false);
+      clearPolling();
     }
   };
 
-  // 示例文本
+  // 重置所有状态
+  const resetAnalysis = () => {
+    clearPolling();
+    setGraphData(null);
+    setError(null);
+    setIsLoading(false);
+    setTaskId(null);
+    setProgress(0);
+    setStatusMessage('');
+    console.log('🔄 分析状态已重置');
+  };
+
+  // 示例文本数据
   const sampleTexts = [
     {
       title: "人工智能基础",
-      content: "人工智能（Artificial Intelligence, AI）是计算机科学的一个分支，旨在创建能够执行通常需要人类智能的任务的系统。机器学习是人工智能的一个重要子领域，通过算法让计算机从数据中学习。深度学习是机器学习的一个分支，使用神经网络来模拟人脑的工作方式。"
+      content: "人工智能（Artificial Intelligence, AI）是计算机科学的一个分支，旨在创建能够执行通常需要人类智能的任务的系统。机器学习是人工智能的一个重要子领域，通过算法让计算机从数据中学习。深度学习是机器学习的一个分支，使用神经网络来模拟人脑的工作方式。自然语言处理和计算机视觉是AI的重要应用领域。"
     },
     {
       title: "科技发展",
-      content: "OpenAI是一家专注于人工智能研究的公司，开发了GPT系列模型。GPT是生成式预训练Transformer模型，能够理解和生成自然语言文本。ChatGPT基于GPT模型，专门针对对话场景进行了优化。"
+      content: "OpenAI是一家专注于人工智能研究的公司，开发了GPT系列模型。GPT是生成式预训练Transformer模型，能够理解和生成自然语言文本。ChatGPT基于GPT模型，专门针对对话场景进行了优化。这些技术推动了AI在各个行业的应用和发展。"
     },
     {
       title: "企业管理",
-      content: "企业管理包括战略规划、组织结构、人力资源管理、财务管理、市场营销等多个方面。现代企业需要建立完善的管理体系，通过科学的管理方法提高效率和竞争力。"
+      content: "企业管理包括战略规划、组织结构、人力资源管理、财务管理、市场营销等多个方面。现代企业需要建立完善的管理体系，通过科学的管理方法提高效率和竞争力。数字化转型和创新管理已成为企业发展的关键要素。"
     }
   ];
 
@@ -161,6 +184,28 @@ const AnalysisPage = () => {
     setInputText(content);
     resetAnalysis();
   };
+
+  // 检查API连接状态
+  const [apiStatus, setApiStatus] = useState('checking');
+  
+  useEffect(() => {
+    const checkApiConnection = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/health`);
+        if (response.ok) {
+          setApiStatus('connected');
+          console.log('✅ API连接正常');
+        } else {
+          setApiStatus('error');
+        }
+      } catch (error) {
+        setApiStatus('error');
+        console.warn('⚠️ API连接失败:', error);
+      }
+    };
+    
+    checkApiConnection();
+  }, []);
 
   return (
     <div className="analysis-page">
@@ -201,15 +246,16 @@ const AnalysisPage = () => {
         </div>
 
         <div className="action-container">
+          {/* 3. 条件渲染: 按钮在isLoading时禁用 */}
           <button
             className={`analyze-button ${isLoading ? 'loading' : ''}`}
-            onClick={startAnalysis}
+            onClick={handleAnalysis}
             disabled={!inputText.trim() || isLoading}
           >
             {isLoading ? '🔄 分析中...' : '🚀 生成知识图谱'}
           </button>
           
-          {(analysisStatus !== 'idle' && taskId) && (
+          {(taskId || error) && (
             <button
               className="reset-button"
               onClick={resetAnalysis}
@@ -220,25 +266,23 @@ const AnalysisPage = () => {
           )}
         </div>
 
-        {/* 状态显示 */}
-        {analysisStatus !== 'idle' && (
+        {/* 状态显示面板 */}
+        {(isLoading || error || graphData) && (
           <div className="status-container">
             <div className="status-header">
-              <span className={`status-indicator ${analysisStatus}`}>
-                {analysisStatus === 'pending' && '⏳'}
-                {analysisStatus === 'processing' && '⚙️'}
-                {analysisStatus === 'completed' && '✅'}
-                {analysisStatus === 'failed' && '❌'}
+              <span className={`status-indicator ${isLoading ? 'processing' : error ? 'failed' : 'completed'}`}>
+                {isLoading && '⚙️'}
+                {error && '❌'}
+                {graphData && !isLoading && !error && '✅'}
               </span>
               <span className="status-text">
-                {analysisStatus === 'pending' && '准备中'}
-                {analysisStatus === 'processing' && '处理中'}
-                {analysisStatus === 'completed' && '已完成'}
-                {analysisStatus === 'failed' && '失败'}
+                {isLoading && '处理中'}
+                {error && '失败'}
+                {graphData && !isLoading && !error && '已完成'}
               </span>
             </div>
             
-            {analysisStatus === 'processing' && (
+            {isLoading && (
               <div className="progress-container">
                 <div className="progress-bar">
                   <div 
@@ -250,7 +294,10 @@ const AnalysisPage = () => {
               </div>
             )}
             
-            <div className="status-message">{statusMessage}</div>
+            <div className="status-message">
+              {error && error}
+              {!error && statusMessage}
+            </div>
             
             {taskId && (
               <div className="task-info">
@@ -259,6 +306,23 @@ const AnalysisPage = () => {
             )}
           </div>
         )}
+
+        {/* API连接状态 */}
+        <div className={`api-status ${apiStatus}`} style={{ 
+          position: 'fixed', 
+          bottom: '20px', 
+          left: '20px',
+          padding: '8px 12px',
+          borderRadius: '8px',
+          fontSize: '12px',
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          border: `1px solid ${apiStatus === 'connected' ? 'rgba(0,255,136,0.3)' : 'rgba(255,107,107,0.3)'}`,
+          color: apiStatus === 'connected' ? '#00FF88' : '#FF6B6B'
+        }}>
+          {apiStatus === 'checking' && '🔌 检查API连接...'}
+          {apiStatus === 'connected' && '🟢 API服务正常'}
+          {apiStatus === 'error' && '🔴 API服务离线'}
+        </div>
       </div>
 
       {/* 右侧图谱面板 */}
@@ -266,16 +330,17 @@ const AnalysisPage = () => {
         <div className="panel-header">
           <h2>🧠 知识图谱</h2>
           <p>
-            {analysisStatus === 'idle' && '分析结果将在此处展示'}
-            {analysisStatus === 'pending' && '正在准备图谱生成...'}
-            {analysisStatus === 'processing' && '正在构建知识图谱...'}
-            {analysisStatus === 'completed' && `图谱包含 ${graphData.nodes.length} 个概念节点`}
-            {analysisStatus === 'failed' && '图谱生成失败'}
+            {/* 3. 条件渲染: 根据状态显示不同描述 */}
+            {!isLoading && !error && !graphData && '分析结果将在此处展示'}
+            {isLoading && '正在构建知识图谱...'}
+            {error && '图谱生成失败'}
+            {graphData && !isLoading && !error && `图谱包含 ${graphData.nodes.length} 个概念节点`}
           </p>
         </div>
 
         <div className="graph-container">
-          {analysisStatus === 'idle' && (
+          {/* 3. 条件渲染: 初始欢迎状态 */}
+          {!isLoading && !error && !graphData && (
             <div className="welcome-message">
               <div className="welcome-icon">🎯</div>
               <h3>欢迎使用知识图谱分析系统</h3>
@@ -297,20 +362,25 @@ const AnalysisPage = () => {
             </div>
           )}
 
-          {(analysisStatus === 'pending' || analysisStatus === 'processing') && (
+          {/* 3. 条件渲染: 加载状态 */}
+          {isLoading && (
             <div className="processing-message">
               <div className="spinner"></div>
-              <h3>正在生成知识图谱</h3>
+              <h3>正在分析中...</h3>
               <p>{statusMessage}</p>
               {progress > 0 && (
                 <div className="mini-progress">
                   <div className="mini-progress-bar" style={{ width: `${progress}%` }}></div>
                 </div>
               )}
+              <div style={{ marginTop: '20px', fontSize: '14px', color: '#888' }}>
+                💡 提示：分析过程包括文本预处理、概念提取、关系识别和图谱构建
+              </div>
             </div>
           )}
 
-          {analysisStatus === 'completed' && graphData.nodes.length > 0 && (
+          {/* 3. 条件渲染: 如果graphData有数据，渲染KnowledgeGraph组件 */}
+          {graphData && graphData.nodes.length > 0 && !isLoading && !error && (
             <div className="graph-canvas-container">
               <GraphCanvas
                 nodes={graphData.nodes}
@@ -323,7 +393,7 @@ const AnalysisPage = () => {
                 sizingType="centrality"
                 labelType="all"
                 onNodeClick={(node) => {
-                  console.log('点击节点:', node);
+                  console.log('🎯 点击节点:', node);
                 }}
                 onNodeContextMenu={(node) => {
                   const info = `节点: ${node.label}\nID: ${node.id}\n类型: ${node.type || 'concept'}`;
@@ -333,7 +403,7 @@ const AnalysisPage = () => {
                   alert(info);
                 }}
                 onCanvasClick={() => {
-                  console.log('点击画布');
+                  console.log('🖱️ 点击画布');
                 }}
               />
               
@@ -348,22 +418,27 @@ const AnalysisPage = () => {
             </div>
           )}
 
-          {analysisStatus === 'failed' && (
+          {/* 3. 条件渲染: 错误状态 */}
+          {error && (
             <div className="error-message">
               <div className="error-icon">⚠️</div>
               <h3>图谱生成失败</h3>
-              <p>{statusMessage}</p>
+              <p>{error}</p>
               <button className="retry-button" onClick={resetAnalysis}>
                 🔄 重试
               </button>
             </div>
           )}
 
-          {analysisStatus === 'completed' && graphData.nodes.length === 0 && (
+          {/* 3. 条件渲染: 空数据状态 */}
+          {graphData && graphData.nodes.length === 0 && !isLoading && !error && (
             <div className="empty-message">
               <div className="empty-icon">📊</div>
               <h3>暂无图谱数据</h3>
-              <p>未能从文本中提取到足够的概念信息</p>
+              <p>未能从文本中提取到足够的概念信息，请尝试输入更详细的文本内容</p>
+              <button className="retry-button" onClick={resetAnalysis}>
+                🔄 重新分析
+              </button>
             </div>
           )}
         </div>

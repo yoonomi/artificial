@@ -66,7 +66,7 @@ class Config:
             config["base_url"] = self.OPENAI_BASE_URL
             
         return config
-
+    
     # 知识图谱配置
     GRAPH_CONFIG = {
         "node_limit": 1000,
