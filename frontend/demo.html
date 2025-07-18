@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoGen 3D知识图谱演示</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: #0a0a0a;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        #graph-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .control-panel h3 {
+            margin: 0 0 15px 0;
+            color: #00D4FF;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .control-item {
+            margin: 8px 0;
+            font-size: 12px;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+        }
+        
+        .control-item span {
+            margin-right: 8px;
+        }
+        
+        .stats {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 212, 255, 0.3);
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00D4FF;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #00D4FF;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff6b6b;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ff6b6b;
+            text-align: center;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div id="graph-container">
+        <div class="loading" id="loading">正在加载3D知识图谱...</div>
+        
+        <div class="control-panel">
+            <h3>🧠 AutoGen 3D知识图谱</h3>
+            <div class="control-item">
+                <span>🖱️</span>左键拖动：旋转视角
+            </div>
+            <div class="control-item">
+                <span>🔍</span>滚轮：缩放视图
+            </div>
+            <div class="control-item">
+                <span>🖱️</span>右键拖动：平移图谱
+            </div>
+            <div class="control-item">
+                <span>👆</span>点击节点：查看详情
+            </div>
+            <div class="stats">
+                <div class="control-item">
+                    <span>📊</span>节点数量: <strong>15</strong>
+                </div>
+                <div class="control-item">
+                    <span>🔗</span>关系数量: <strong>15</strong>
+                </div>
+                <div class="control-item">
+                    <span>🎯</span>布局: <strong>3D力导向</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 使用Three.js直接创建3D图谱 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <script>
+        console.log('开始初始化3D知识图谱...');
+        
+        // AutoGen系统提取的中文知识图谱数据
+        const graphData = {
+            nodes: [
+                { id: 1, label: '人工智能技术', color: '#FF6B6B', size: 2.0, x: 0, y: 0, z: 0 },
+                { id: 2, label: 'OpenAI', color: '#4ECDC4', size: 1.5, x: 5, y: 2, z: 3 },
+                { id: 3, label: 'GPT', color: '#45B7D1', size: 1.2, x: 8, y: 1, z: 2 },
+                { id: 4, label: 'ChatGPT', color: '#96CEB4', size: 1.2, x: 10, y: 3, z: 1 },
+                { id: 5, label: 'DeepMind', color: '#FFEAA7', size: 1.5, x: -5, y: 4, z: -2 },
+                { id: 6, label: 'AlphaGo', color: '#DDA0DD', size: 1.2, x: -8, y: 2, z: -4 },
+                { id: 7, label: '深度学习', color: '#98D8C8', size: 1.6, x: 2, y: -3, z: 5 },
+                { id: 8, label: '机器学习', color: '#A8E6CF', size: 1.6, x: -2, y: -4, z: 4 },
+                { id: 9, label: '自然语言处理', color: '#FFB6C1', size: 1.3, x: 6, y: -2, z: -3 },
+                { id: 10, label: '计算机视觉', color: '#87CEEB', size: 1.3, x: -6, y: -1, z: 3 },
+                { id: 11, label: '阿兰·图灵', color: '#F0E68C', size: 1.0, x: 3, y: 6, z: -1 },
+                { id: 12, label: '图灵测试', color: '#E6E6FA', size: 0.8, x: 5, y: 7, z: 0 },
+                { id: 13, label: '神经网络', color: '#FFA07A', size: 1.4, x: 0, y: -6, z: 2 },
+                { id: 14, label: '李世石', color: '#20B2AA', size: 0.8, x: -10, y: 3, z: -6 },
+                { id: 15, label: '腾讯', color: '#DAA520', size: 1.1, x: 4, y: 5, z: -5 }
+            ],
+            edges: [
+                { source: 2, target: 3, label: '开发' },
+                { source: 2, target: 4, label: '开发' },
+                { source: 3, target: 4, label: '基础模型' },
+                { source: 5, target: 6, label: '开发' },
+                { source: 1, target: 7, label: '包含' },
+                { source: 1, target: 8, label: '包含' },
+                { source: 1, target: 9, label: '包含' },
+                { source: 1, target: 10, label: '包含' },
+                { source: 7, target: 13, label: '基于' },
+                { source: 8, target: 7, label: '包含' },
+                { source: 11, target: 12, label: '提出' },
+                { source: 11, target: 1, label: '奠定基础' },
+                { source: 6, target: 14, label: '击败' },
+                { source: 9, target: 3, label: '应用领域' },
+                { source: 15, target: 1, label: '研发' }
+            ]
+        };
+
+        // 初始化3D场景
+        let scene, camera, renderer, controls;
+        let nodeObjects = {};
+        let edgeObjects = [];
+
+        function init() {
+            console.log('正在初始化Three.js场景...');
+            
+            try {
+                // 创建场景
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x0a0a0a);
+
+                // 创建相机
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(20, 20, 20);
+
+                // 创建渲染器
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                document.getElementById('graph-container').appendChild(renderer.domElement);
+
+                // 添加控制器
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.enableZoom = true;
+                controls.enablePan = true;
+                controls.enableRotate = true;
+
+                // 添加光源
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 5);
+                directionalLight.castShadow = true;
+                scene.add(directionalLight);
+
+                // 创建节点和边
+                createNodes();
+                createEdges();
+
+                // 添加鼠标事件
+                addMouseEvents();
+
+                // 隐藏加载动画
+                document.getElementById('loading').style.display = 'none';
+
+                console.log('3D知识图谱初始化完成！');
+                
+                // 开始渲染循环
+                animate();
+                
+            } catch (error) {
+                console.error('初始化失败:', error);
+                showError('初始化3D场景失败: ' + error.message);
+            }
+        }
+
+        function createNodes() {
+            console.log('创建节点...');
+            
+            graphData.nodes.forEach(nodeData => {
+                try {
+                    // 创建球体几何
+                    const geometry = new THREE.SphereGeometry(nodeData.size, 32, 32);
+                    const material = new THREE.MeshLambertMaterial({ 
+                        color: nodeData.color,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    
+                    const sphere = new THREE.Mesh(geometry, material);
+                    sphere.position.set(nodeData.x, nodeData.y, nodeData.z);
+                    sphere.castShadow = true;
+                    sphere.userData = nodeData;
+                    
+                    // 添加发光效果
+                    const glowGeometry = new THREE.SphereGeometry(nodeData.size * 1.2, 16, 16);
+                    const glowMaterial = new THREE.MeshBasicMaterial({
+                        color: nodeData.color,
+                        transparent: true,
+                        opacity: 0.2
+                    });
+                    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                    glow.position.copy(sphere.position);
+                    scene.add(glow);
+
+                    // 添加文字标签
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = 256;
+                    canvas.height = 64;
+                    
+                    context.fillStyle = '#FFFFFF';
+                    context.font = '20px Microsoft YaHei, Arial';
+                    context.textAlign = 'center';
+                    context.fillText(nodeData.label, 128, 35);
+                    
+                    const texture = new THREE.CanvasTexture(canvas);
+                    const labelMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+                    const label = new THREE.Sprite(labelMaterial);
+                    label.position.set(nodeData.x, nodeData.y + nodeData.size + 1, nodeData.z);
+                    label.scale.set(4, 1, 1);
+                    
+                    scene.add(sphere);
+                    scene.add(label);
+                    
+                    nodeObjects[nodeData.id] = { mesh: sphere, label: label, glow: glow };
+                    
+                } catch (error) {
+                    console.error('创建节点失败:', nodeData.label, error);
+                }
+            });
+            
+            console.log(`成功创建 ${Object.keys(nodeObjects).length} 个节点`);
+        }
+
+        function createEdges() {
+            console.log('创建连线...');
+            
+            graphData.edges.forEach(edge => {
+                try {
+                    const sourceNode = graphData.nodes.find(n => n.id === edge.source);
+                    const targetNode = graphData.nodes.find(n => n.id === edge.target);
+                    
+                    if (sourceNode && targetNode) {
+                        const geometry = new THREE.BufferGeometry();
+                        const vertices = new Float32Array([
+                            sourceNode.x, sourceNode.y, sourceNode.z,
+                            targetNode.x, targetNode.y, targetNode.z
+                        ]);
+                        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                        
+                        const material = new THREE.LineBasicMaterial({ 
+                            color: 0x00D4FF, 
+                            transparent: true, 
+                            opacity: 0.6 
+                        });
+                        const line = new THREE.Line(geometry, material);
+                        
+                        scene.add(line);
+                        edgeObjects.push(line);
+                    }
+                } catch (error) {
+                    console.error('创建连线失败:', edge, error);
+                }
+            });
+            
+            console.log(`成功创建 ${edgeObjects.length} 条连线`);
+        }
+
+        function addMouseEvents() {
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            function onMouseClick(event) {
+                if (event.target !== renderer.domElement) return;
+                
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                
+                const nodeObjects_array = Object.values(nodeObjects).map(obj => obj.mesh);
+                const intersects = raycaster.intersectObjects(nodeObjects_array);
+
+                if (intersects.length > 0) {
+                    const nodeData = intersects[0].object.userData;
+                    console.log('点击节点:', nodeData);
+                    
+                    // 简单的节点高亮效果
+                    intersects[0].object.material.emissive.setHex(0x444444);
+                    setTimeout(() => {
+                        if (intersects[0].object.material) {
+                            intersects[0].object.material.emissive.setHex(0x000000);
+                        }
+                    }, 500);
+                    
+                    alert(`节点信息:\n名称: ${nodeData.label}\nID: ${nodeData.id}\n颜色: ${nodeData.color}`);
+                }
+            }
+
+            renderer.domElement.addEventListener('click', onMouseClick);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            try {
+                // 更新控制器
+                controls.update();
+                
+                // 轻微的节点动画效果
+                Object.values(nodeObjects).forEach((nodeObj, index) => {
+                    const time = Date.now() * 0.001;
+                    if (nodeObj.mesh) {
+                        nodeObj.mesh.rotation.y = time * 0.5 + index;
+                    }
+                    if (nodeObj.glow) {
+                        nodeObj.glow.rotation.y = time * 0.3 + index;
+                    }
+                });
+                
+                renderer.render(scene, camera);
+            } catch (error) {
+                console.error('渲染错误:', error);
+            }
+        }
+
+        function onWindowResize() {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+        function showError(message) {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.innerHTML = `
+                    <div class="error-message">
+                        <h3>⚠️ 加载错误</h3>
+                        <p>${message}</p>
+                        <p>请检查浏览器控制台获取更多信息。</p>
+                    </div>
+                `;
+            }
+        }
+
+        window.addEventListener('resize', onWindowResize);
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', () => {
+            console.log('页面加载完成，准备初始化...');
+            
+            // 检查Three.js是否正确加载
+            if (typeof THREE === 'undefined') {
+                showError('Three.js库加载失败，请检查网络连接。');
+                return;
+            }
+            
+            if (typeof THREE.OrbitControls === 'undefined') {
+                console.warn('OrbitControls未加载，将不支持鼠标控制');
+            }
+            
+            setTimeout(init, 1000); // 稍微延迟以确保样式和库加载完成
+        });
+
+        // 错误处理
+        window.addEventListener('error', (e) => {
+            console.error('页面错误:', e.error);
+            showError(`页面错误: ${e.message}`);
+        });
+        
+        // 检测Three.js库加载状态
+        let checkCount = 0;
+        const checkInterval = setInterval(() => {
+            checkCount++;
+            if (typeof THREE !== 'undefined') {
+                console.log('Three.js库加载成功！');
+                clearInterval(checkInterval);
+            } else if (checkCount > 10) {
+                console.error('Three.js库加载超时');
+                showError('Three.js库加载超时，请刷新页面重试。');
+                clearInterval(checkInterval);
+            }
+        }, 500);
+    </script>
+</body>
+</html> 
