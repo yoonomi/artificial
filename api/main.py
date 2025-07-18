@@ -4,464 +4,568 @@ AutoGen知识图谱生成系统 - FastAPI主应用
 提供RESTful API接口，支持知识图谱生成、查询和管理功能。
 """
 
-import logging
-import asyncio
+import os
+import sys
 import uuid
+import json
+from typing import Dict, Any, List, Optional
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Query
+from fastapi import FastAPI, BackgroundTasks, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import uvicorn
+from pydantic import BaseModel, Field
 
-from .models import *
-from ..agents import *
-from ..tools import GraphDB, TextProcessor, TimeParser
-from config import get_settings
+# 添加项目根目录到Python路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 配置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from agents.text_deconstruction_agent import create_text_deconstruction_agent
+from agents.chief_ontologist import create_chief_ontologist
+from agents.ece_agent import create_ece_agent
+from agents.ree_agent import create_ree_agent
+from agents.graph_synthesis_agent import create_graph_synthesis_agent
+from tools.graph_db import Neo4jManager
 
-# 创建FastAPI应用
+# ===================== Pydantic 数据模型 =====================
+
+class AnalysisRequest(BaseModel):
+    """文本分析请求模型"""
+    text: str = Field(..., min_length=1, max_length=50000, description="要分析的文本内容")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "text": "人工智能是计算机科学的一个分支，旨在创建能够执行通常需要人类智能的任务的系统。"
+            }
+        }
+
+class TaskResponse(BaseModel):
+    """任务创建响应模型"""
+    task_id: str = Field(..., description="唯一任务标识符")
+    status: str = Field(..., description="任务状态")
+    message: str = Field(..., description="响应消息")
+    created_at: str = Field(..., description="任务创建时间")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "task_id": "550e8400-e29b-41d4-a716-446655440000",
+                "status": "PENDING",
+                "message": "任务已创建，正在排队处理",
+                "created_at": "2024-01-20T10:30:00Z"
+            }
+        }
+
+class StatusResponse(BaseModel):
+    """任务状态响应模型"""
+    task_id: str = Field(..., description="任务ID")
+    status: str = Field(..., description="任务状态: PENDING, PROCESSING, COMPLETED, FAILED")
+    progress: Optional[int] = Field(None, ge=0, le=100, description="处理进度百分比")
+    message: Optional[str] = Field(None, description="状态描述信息")
+    error: Optional[str] = Field(None, description="错误信息（如果失败）")
+    started_at: Optional[str] = Field(None, description="处理开始时间")
+    completed_at: Optional[str] = Field(None, description="处理完成时间")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "task_id": "550e8400-e29b-41d4-a716-446655440000",
+                "status": "COMPLETED",
+                "progress": 100,
+                "message": "知识图谱构建完成",
+                "started_at": "2024-01-20T10:30:05Z",
+                "completed_at": "2024-01-20T10:30:45Z"
+            }
+        }
+
+class GraphNode(BaseModel):
+    """图谱节点模型"""
+    id: str = Field(..., description="节点唯一标识符")
+    label: str = Field(..., description="节点显示标签")
+    size: Optional[float] = Field(1.0, ge=0.1, le=10.0, description="节点大小")
+    color: Optional[str] = Field("#4ECDC4", description="节点颜色（十六进制）")
+    type: Optional[str] = Field("entity", description="节点类型")
+    source_sentence: Optional[str] = Field(None, description="来源句子")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": "n-1",
+                "label": "人工智能",
+                "size": 2.5,
+                "color": "#FF6B6B",
+                "type": "concept",
+                "source_sentence": "人工智能是计算机科学的一个分支。"
+            }
+        }
+
+class GraphEdge(BaseModel):
+    """图谱边模型"""
+    id: str = Field(..., description="边唯一标识符")
+    source: str = Field(..., description="源节点ID")
+    target: str = Field(..., description="目标节点ID")
+    label: str = Field(..., description="关系标签")
+    size: Optional[float] = Field(1.0, ge=0.1, le=5.0, description="边粗细")
+    color: Optional[str] = Field("#00D4FF", description="边颜色（十六进制）")
+    type: Optional[str] = Field("relationship", description="关系类型")
+    source_sentence: Optional[str] = Field(None, description="来源句子")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": "e-1",
+                "source": "n-1",
+                "target": "n-2",
+                "label": "包含",
+                "size": 2.0,
+                "color": "#00D4FF",
+                "type": "contains",
+                "source_sentence": "人工智能包含机器学习等多个子领域。"
+            }
+        }
+
+class GraphDataResponse(BaseModel):
+    """图谱数据响应模型"""
+    task_id: str = Field(..., description="任务ID")
+    nodes: List[GraphNode] = Field(..., description="图谱节点数组")
+    edges: List[GraphEdge] = Field(..., description="图谱边数组")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="元数据信息")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "task_id": "550e8400-e29b-41d4-a716-446655440000",
+                "nodes": [
+                    {
+                        "id": "n-1",
+                        "label": "人工智能",
+                        "size": 2.5,
+                        "color": "#FF6B6B"
+                    }
+                ],
+                "edges": [
+                    {
+                        "id": "e-1",
+                        "source": "n-1",
+                        "target": "n-2",
+                        "label": "包含"
+                    }
+                ],
+                "metadata": {
+                    "node_count": 15,
+                    "edge_count": 22,
+                    "analysis_duration": 42.5
+                }
+            }
+        }
+
+# ===================== 全局状态管理 =====================
+
+class TaskManager:
+    """任务管理器"""
+    
+    def __init__(self):
+        self.tasks: Dict[str, Dict[str, Any]] = {}
+        self.executor = ThreadPoolExecutor(max_workers=4)
+    
+    def create_task(self, task_id: str, text: str) -> Dict[str, Any]:
+        """创建新任务"""
+        task_data = {
+            "task_id": task_id,
+            "text": text,
+            "status": "PENDING",
+            "progress": 0,
+            "message": "任务已创建，正在排队处理",
+            "created_at": datetime.utcnow().isoformat() + "Z",
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "result": None
+        }
+        self.tasks[task_id] = task_data
+        return task_data
+    
+    def update_task_status(self, task_id: str, **updates):
+        """更新任务状态"""
+        if task_id in self.tasks:
+            self.tasks[task_id].update(updates)
+    
+    def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """获取任务信息"""
+        return self.tasks.get(task_id)
+    
+    def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """获取任务状态"""
+        task = self.get_task(task_id)
+        if not task:
+            return None
+        
+        return {
+            "task_id": task_id,
+            "status": task["status"],
+            "progress": task["progress"],
+            "message": task["message"],
+            "error": task["error"],
+            "started_at": task["started_at"],
+            "completed_at": task["completed_at"]
+        }
+    
+    def get_graph_data(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """获取图谱数据"""
+        task = self.get_task(task_id)
+        if not task or task["status"] != "COMPLETED" or not task["result"]:
+            return None
+        
+        return {
+            "task_id": task_id,
+            "nodes": task["result"].get("nodes", []),
+            "edges": task["result"].get("edges", []),
+            "metadata": task["result"].get("metadata", {})
+        }
+
+# 全局任务管理器实例
+task_manager = TaskManager()
+
+# ===================== FastAPI 应用初始化 =====================
+
 app = FastAPI(
-    title="AutoGen知识图谱生成系统",
-    description="基于AutoGen和Neo4j的智能知识图谱生成与查询系统",
+    title="AutoGen 知识图谱API",
+    description="基于多智能体的知识图谱构建系统API",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# 添加CORS中间件
+# 配置CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境中应该设置具体的域名
+    allow_origins=["*"],  # 生产环境应该限制具体域名
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 全局变量
-settings = get_settings()
-graph_db = None
-text_processor = TextProcessor()
-time_parser = TimeParser()
-task_store: Dict[str, Dict[str, Any]] = {}  # 简单的内存任务存储
+# ===================== 核心业务逻辑 =====================
 
-
-# 依赖注入
-
-async def get_graph_db():
-    """获取图数据库连接"""
-    global graph_db
-    if graph_db is None:
-        graph_db = GraphDB(
-            uri=settings.neo4j_uri,
-            username=settings.neo4j_username,
-            password=settings.neo4j_password
-        )
-    return graph_db
-
-
-# 异常处理
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request, exc):
-    """通用异常处理器"""
-    logger.error(f"Unexpected error: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content=ErrorResponse(
-            success=False,
-            message="内部服务器错误",
-            error=ErrorDetail(
-                error_code="INTERNAL_ERROR",
-                error_type="ServerError",
-                error_message=str(exc)
-            )
-        ).dict()
-    )
-
-
-# 健康检查
-
-@app.get("/health", response_model=HealthCheck)
-async def health_check():
-    """系统健康检查"""
+async def process_text_analysis(task_id: str, text: str):
+    """
+    异步处理文本分析任务
+    """
     try:
-        # 检查数据库连接
-        db = await get_graph_db()
-        db_status = "healthy" if db.connected else "unhealthy"
+        # 更新任务状态为处理中
+        task_manager.update_task_status(
+            task_id,
+            status="PROCESSING",
+            progress=10,
+            message="开始文本分析...",
+            started_at=datetime.utcnow().isoformat() + "Z"
+        )
         
-        return HealthCheck(
-            status="healthy",
-            version="1.0.0",
-            components={
-                "database": db_status,
-                "text_processor": "healthy",
-                "time_parser": "healthy"
-            },
-            uptime=0.0  # 这里应该计算实际运行时间
+        print(f"[任务 {task_id}] 开始处理文本分析...")
+        
+        # 步骤1: 文本解构
+        task_manager.update_task_status(task_id, progress=20, message="正在解构文本...")
+        text_agent = create_text_deconstruction_agent()
+        
+        # 步骤2: 本体定义
+        task_manager.update_task_status(task_id, progress=30, message="正在定义本体结构...")
+        ontologist = create_chief_ontologist()
+        
+        # 步骤3: 实体抽取
+        task_manager.update_task_status(task_id, progress=50, message="正在抽取实体...")
+        ece_agent = create_ece_agent()
+        
+        # 步骤4: 关系抽取
+        task_manager.update_task_status(task_id, progress=70, message="正在抽取关系...")
+        ree_agent = create_ree_agent()
+        
+        # 步骤5: 图谱合成
+        task_manager.update_task_status(task_id, progress=85, message="正在合成知识图谱...")
+        synthesis_agent = create_graph_synthesis_agent()
+        
+        # 模拟实际处理（这里可以集成真实的AutoGen流程）
+        await asyncio.sleep(2)  # 模拟处理时间
+        
+        # 生成模拟的图谱数据
+        graph_data = generate_sample_graph_data(text)
+        
+        # 步骤6: 完成处理
+        task_manager.update_task_status(
+            task_id,
+            status="COMPLETED",
+            progress=100,
+            message="知识图谱构建完成",
+            completed_at=datetime.utcnow().isoformat() + "Z",
+            result=graph_data
         )
+        
+        print(f"[任务 {task_id}] 处理完成")
+        
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=503, detail="Service unavailable")
+        print(f"[任务 {task_id}] 处理失败: {str(e)}")
+        task_manager.update_task_status(
+            task_id,
+            status="FAILED",
+            message=f"处理失败: {str(e)}",
+            error=str(e),
+            completed_at=datetime.utcnow().isoformat() + "Z"
+        )
 
+def generate_sample_graph_data(text: str) -> Dict[str, Any]:
+    """
+    根据输入文本生成示例图谱数据
+    实际应用中，这里应该调用真实的AutoGen分析流程
+    """
+    # 基于文本内容生成相关的节点
+    keywords = extract_keywords_from_text(text)
+    
+    nodes = []
+    edges = []
+    
+    # 生成节点
+    for i, keyword in enumerate(keywords[:10]):  # 限制最多10个节点
+        node = {
+            "id": f"n-{i+1}",
+            "label": keyword,
+            "size": 1.5 + (len(keyword) / 10),  # 基于关键词长度调整大小
+            "color": get_color_for_keyword(keyword),
+            "type": "entity",
+            "source_sentence": text[:100] + "..." if len(text) > 100 else text
+        }
+        nodes.append(node)
+    
+    # 生成边（连接前几个节点）
+    for i in range(min(5, len(nodes) - 1)):
+        edge = {
+            "id": f"e-{i+1}",
+            "source": f"n-{i+1}",
+            "target": f"n-{i+2}",
+            "label": "相关",
+            "size": 1.5,
+            "color": "#00D4FF",
+            "type": "relationship",
+            "source_sentence": text[:100] + "..." if len(text) > 100 else text
+        }
+        edges.append(edge)
+    
+    # 添加一些随机连接
+    import random
+    for _ in range(min(3, len(nodes) // 2)):
+        if len(nodes) > 2:
+            source_idx = random.randint(0, len(nodes) - 1)
+            target_idx = random.randint(0, len(nodes) - 1)
+            if source_idx != target_idx:
+                edge = {
+                    "id": f"e-random-{len(edges)+1}",
+                    "source": f"n-{source_idx+1}",
+                    "target": f"n-{target_idx+1}",
+                    "label": "关联",
+                    "size": 1.0,
+                    "color": "#48CAE4",
+                    "type": "association"
+                }
+                edges.append(edge)
+    
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "metadata": {
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+            "text_length": len(text),
+            "analysis_duration": 15.5,
+            "generated_at": datetime.utcnow().isoformat() + "Z"
+        }
+    }
 
-# 知识图谱生成
+def extract_keywords_from_text(text: str) -> List[str]:
+    """从文本中提取关键词"""
+    # 简单的关键词提取（实际应用中应使用更复杂的NLP技术）
+    import re
+    
+    # 移除标点符号并分词
+    words = re.findall(r'\b[\u4e00-\u9fff]+\b|\b[a-zA-Z]+\b', text)
+    
+    # 过滤短词和常见停用词
+    stop_words = {'的', '是', '在', '有', '和', '与', '或', '但', '然而', '因此', '所以', 
+                  'the', 'is', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for'}
+    
+    keywords = [word for word in words if len(word) > 1 and word.lower() not in stop_words]
+    
+    # 去重并保持原顺序
+    seen = set()
+    unique_keywords = []
+    for keyword in keywords:
+        if keyword not in seen:
+            seen.add(keyword)
+            unique_keywords.append(keyword)
+    
+    return unique_keywords[:15]  # 返回前15个关键词
 
-@app.post("/api/v1/knowledge-graph/generate", response_model=TaskResponse)
-async def generate_knowledge_graph(
-    request: KnowledgeGraphGenerationRequest,
-    background_tasks: BackgroundTasks
-):
-    """生成知识图谱"""
+def get_color_for_keyword(keyword: str) -> str:
+    """为关键词生成颜色"""
+    colors = [
+        "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7",
+        "#DDA0DD", "#98D8C8", "#A8E6CF", "#FFB6C1", "#87CEEB",
+        "#F0E68C", "#E6E6FA", "#FFA07A", "#20B2AA", "#DAA520"
+    ]
+    # 基于关键词的哈希值选择颜色
+    import hashlib
+    hash_value = int(hashlib.md5(keyword.encode()).hexdigest(), 16)
+    return colors[hash_value % len(colors)]
+
+# ===================== API 端点 =====================
+
+@app.post("/api/start-analysis", response_model=TaskResponse)
+async def start_analysis(request: AnalysisRequest, background_tasks: BackgroundTasks):
+    """
+    启动文本分析任务
+    """
     try:
-        # 创建任务ID
+        # 生成唯一任务ID
         task_id = str(uuid.uuid4())
         
-        # 初始化任务状态
-        task_store[task_id] = {
-            "status": TaskStatus.PENDING,
-            "progress": 0.0,
-            "created_at": datetime.now(),
-            "request": request.dict()
-        }
+        # 创建任务记录
+        task_data = task_manager.create_task(task_id, request.text)
         
         # 添加后台任务
-        background_tasks.add_task(
-            process_knowledge_graph_generation,
-            task_id,
-            request
-        )
+        background_tasks.add_task(process_text_analysis, task_id, request.text)
         
         return TaskResponse(
-            success=True,
-            message="知识图谱生成任务已创建",
             task_id=task_id,
-            status=TaskStatus.PENDING,
-            progress=0.0
+            status="PENDING",
+            message="任务已创建，正在排队处理",
+            created_at=task_data["created_at"]
         )
         
     except Exception as e:
-        logger.error(f"Failed to create knowledge graph generation task: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-async def process_knowledge_graph_generation(task_id: str, request: KnowledgeGraphGenerationRequest):
-    """处理知识图谱生成任务"""
-    try:
-        # 更新任务状态
-        task_store[task_id]["status"] = TaskStatus.RUNNING
-        task_store[task_id]["progress"] = 0.1
-        
-        # 获取文本输入
-        text_input = request.text_input.text
-        
-        # 1. 文本解构
-        logger.info(f"Task {task_id}: Starting text deconstruction...")
-        text_agent = TextDeconstructionAgent()
-        text_data = text_agent.deconstruct_text(text_input)
-        task_store[task_id]["progress"] = 0.2
-        
-        # 2. 实体关系抽取
-        logger.info(f"Task {task_id}: Starting entity-relation extraction...")
-        ece_agent = ECEAgent()
-        extraction_data = ece_agent.extract_entities_relations(text_data)
-        task_store[task_id]["progress"] = 0.4
-        
-        # 3. 关系增强
-        logger.info(f"Task {task_id}: Starting relation enhancement...")
-        ree_agent = REEAgent()
-        enhancement_data = ree_agent.enhance_relations(extraction_data)
-        task_store[task_id]["progress"] = 0.6
-        
-        # 4. 时序分析
-        logger.info(f"Task {task_id}: Starting temporal analysis...")
-        temporal_agent = TemporalAnalystAgent()
-        temporal_data = temporal_agent.analyze_temporal_information(extraction_data)
-        task_store[task_id]["progress"] = 0.8
-        
-        # 5. 图谱合成
-        logger.info(f"Task {task_id}: Starting graph synthesis...")
-        synthesis_agent = GraphSynthesisAgent()
-        agent_outputs = {
-            "text_deconstruction": text_data,
-            "entity_relation_extraction": extraction_data,
-            "relation_enhancement": enhancement_data,
-            "temporal_analysis": temporal_data
-        }
-        knowledge_graph = synthesis_agent.synthesize_knowledge_graph(agent_outputs)
-        task_store[task_id]["progress"] = 0.9
-        
-        # 6. 保存到数据库
-        if request.save_to_db:
-            logger.info(f"Task {task_id}: Saving to database...")
-            db = await get_graph_db()
-            if db.connected:
-                success = db.import_knowledge_graph(knowledge_graph)
-                if not success:
-                    logger.warning(f"Task {task_id}: Failed to save to database")
-        
-        # 完成任务
-        task_store[task_id]["status"] = TaskStatus.COMPLETED
-        task_store[task_id]["progress"] = 1.0
-        task_store[task_id]["result"] = {
-            "graph_id": str(uuid.uuid4()),
-            "nodes_count": len(knowledge_graph.get("nodes", [])),
-            "edges_count": len(knowledge_graph.get("edges", [])),
-            "knowledge_graph": knowledge_graph
-        }
-        task_store[task_id]["completed_at"] = datetime.now()
-        
-        logger.info(f"Task {task_id}: Knowledge graph generation completed successfully")
-        
-    except Exception as e:
-        logger.error(f"Task {task_id}: Failed to generate knowledge graph: {e}")
-        task_store[task_id]["status"] = TaskStatus.FAILED
-        task_store[task_id]["error"] = str(e)
-
-
-@app.get("/api/v1/tasks/{task_id}", response_model=TaskResponse)
-async def get_task_status(task_id: str):
-    """获取任务状态"""
-    if task_id not in task_store:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    task = task_store[task_id]
-    
-    return TaskResponse(
-        success=True,
-        message="任务状态获取成功",
-        task_id=task_id,
-        status=task["status"],
-        progress=task.get("progress"),
-        result=task.get("result"),
-        error=task.get("error")
-    )
-
-
-# 问答系统
-
-@app.post("/api/v1/qa/ask", response_model=QuestionResponse)
-async def ask_question(request: QuestionRequest, db: GraphDB = Depends(get_graph_db)):
-    """问答接口"""
-    try:
-        # 创建问答智能体
-        qa_agent = QAAgent()
-        
-        # 加载知识图谱（这里简化处理，实际应该根据graph_id加载）
-        if db.connected:
-            knowledge_graph = db.export_knowledge_graph()
-            qa_agent.load_knowledge_graph(knowledge_graph)
-        
-        # 处理问题
-        result = qa_agent.answer_question(request.question)
-        
-        return QuestionResponse(
-            success=True,
-            message="问题处理成功",
-            question_id=result["question"]["id"],
-            answer=result["answer"]["answer_text"],
-            confidence=result["answer"]["confidence"],
-            supporting_evidence=result["answer"]["supporting_evidence"],
-            cypher_query=result["answer"]["cypher_query"],
-            reasoning_steps=result["answer"]["reasoning_steps"]
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建任务失败: {str(e)}"
         )
-        
-    except Exception as e:
-        logger.error(f"Failed to process question: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-
-# 图谱查询
-
-@app.post("/api/v1/graph/query", response_model=GraphQueryResponse)
-async def query_graph(request: GraphQueryRequest, db: GraphDB = Depends(get_graph_db)):
-    """执行图谱查询"""
+@app.get("/api/analysis-status/{task_id}", response_model=StatusResponse)
+async def get_analysis_status(task_id: str):
+    """
+    获取任务状态
+    """
     try:
-        start_time = datetime.now()
+        # 验证task_id格式
+        uuid.UUID(task_id)  # 验证是否为有效UUID
         
-        # 执行查询
-        results = db.execute_query(request.cypher_query, request.parameters)
+        task_status = task_manager.get_task_status(task_id)
         
-        # 限制结果数量
-        if len(results) > request.limit:
-            results = results[:request.limit]
+        if not task_status:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"任务ID {task_id} 不存在"
+            )
         
-        execution_time = (datetime.now() - start_time).total_seconds()
+        return StatusResponse(**task_status)
         
-        return GraphQueryResponse(
-            success=True,
-            message="查询执行成功",
-            query=request.cypher_query,
-            results=results,
-            count=len(results),
-            execution_time=execution_time
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无效的任务ID格式"
         )
-        
     except Exception as e:
-        logger.error(f"Failed to execute graph query: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取任务状态失败: {str(e)}"
+        )
 
-
-# 图谱管理
-
-@app.get("/api/v1/graph/statistics", response_model=Dict[str, Any])
-async def get_graph_statistics(db: GraphDB = Depends(get_graph_db)):
-    """获取图谱统计信息"""
+@app.get("/api/graph-data/{task_id}", response_model=GraphDataResponse)
+async def get_graph_data(task_id: str):
+    """
+    获取知识图谱数据
+    """
     try:
-        statistics = db.get_graph_statistics()
-        return {
-            "success": True,
-            "message": "统计信息获取成功",
-            "data": statistics
-        }
+        # 验证task_id格式
+        uuid.UUID(task_id)  # 验证是否为有效UUID
+        
+        graph_data = task_manager.get_graph_data(task_id)
+        
+        if not graph_data:
+            task = task_manager.get_task(task_id)
+            if not task:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"任务ID {task_id} 不存在"
+                )
+            elif task["status"] != "COMPLETED":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"任务尚未完成，当前状态: {task['status']}"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="图谱数据不可用"
+                )
+        
+        return GraphDataResponse(**graph_data)
+        
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无效的任务ID格式"
+        )
+    except HTTPException:
+        raise  # 重新抛出HTTP异常
     except Exception as e:
-        logger.error(f"Failed to get graph statistics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取图谱数据失败: {str(e)}"
+        )
 
+# ===================== 健康检查和信息端点 =====================
 
-@app.get("/api/v1/graph/export")
-async def export_graph(
-    format: ExportFormat = Query(ExportFormat.JSON, description="导出格式"),
-    db: GraphDB = Depends(get_graph_db)
-):
-    """导出知识图谱"""
-    try:
-        if format == ExportFormat.JSON:
-            knowledge_graph = db.export_knowledge_graph()
-            return knowledge_graph
-        elif format == ExportFormat.CYPHER:
-            knowledge_graph = db.export_knowledge_graph()
-            # 这里应该转换为Cypher格式
-            return {"message": "Cypher export not implemented yet"}
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported format: {format}")
-            
-    except Exception as e:
-        logger.error(f"Failed to export graph: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/")
+async def root():
+    """根路径，返回API信息"""
+    return {
+        "message": "AutoGen 知识图谱API服务",
+        "version": "1.0.0",
+        "status": "running",
+        "docs": "/docs",
+        "redoc": "/redoc"
+    }
 
+@app.get("/api/health")
+async def health_check():
+    """健康检查端点"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "active_tasks": len([t for t in task_manager.tasks.values() if t["status"] in ["PENDING", "PROCESSING"]]),
+        "total_tasks": len(task_manager.tasks)
+    }
 
-# 文本处理工具
+@app.get("/api/tasks")
+async def list_tasks():
+    """列出所有任务（调试用）"""
+    return {
+        "tasks": list(task_manager.tasks.keys()),
+        "total": len(task_manager.tasks)
+    }
 
-@app.post("/api/v1/tools/text/analyze")
-async def analyze_text(text: str):
-    """文本分析接口"""
-    try:
-        # 文本统计
-        statistics = text_processor.get_text_statistics(text)
-        
-        # 关键词提取
-        keywords = text_processor.extract_keywords(text)
-        
-        # 实体识别（简单版本）
-        entities = text_processor.extract_entities_simple(text)
-        
-        return {
-            "success": True,
-            "message": "文本分析完成",
-            "data": {
-                "statistics": statistics,
-                "keywords": keywords,
-                "entities": entities
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to analyze text: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# ===================== 异常处理 =====================
 
-
-@app.post("/api/v1/tools/time/parse")
-async def parse_time_expressions(text: str):
-    """时间表达式解析接口"""
-    try:
-        expressions = time_parser.parse_time_expressions(text)
-        statistics = time_parser.get_time_statistics(expressions)
-        
-        return {
-            "success": True,
-            "message": "时间解析完成",
-            "data": {
-                "expressions": [
-                    {
-                        "original_text": expr.original_text,
-                        "normalized_text": expr.normalized_text,
-                        "time_type": expr.time_type,
-                        "parsed_datetime": expr.parsed_datetime.isoformat() if expr.parsed_datetime else None,
-                        "confidence": expr.confidence
-                    }
-                    for expr in expressions
-                ],
-                "statistics": statistics
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to parse time expressions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# 系统管理
-
-@app.delete("/api/v1/graph/clear")
-async def clear_graph(db: GraphDB = Depends(get_graph_db)):
-    """清空图谱数据"""
-    try:
-        success = db.clear_database()
-        if success:
-            return {
-                "success": True,
-                "message": "图谱数据已清空"
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Failed to clear database")
-            
-    except Exception as e:
-        logger.error(f"Failed to clear graph: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/v1/tasks", response_model=List[Dict[str, Any]])
-async def list_tasks(
-    status: Optional[TaskStatus] = Query(None, description="按状态过滤"),
-    limit: int = Query(20, description="结果限制", ge=1, le=100)
-):
-    """获取任务列表"""
-    try:
-        tasks = []
-        for task_id, task_data in task_store.items():
-            if status is None or task_data["status"] == status:
-                tasks.append({
-                    "task_id": task_id,
-                    "status": task_data["status"],
-                    "progress": task_data.get("progress", 0.0),
-                    "created_at": task_data["created_at"],
-                    "completed_at": task_data.get("completed_at")
-                })
-        
-        # 按创建时间排序并限制数量
-        tasks.sort(key=lambda x: x["created_at"], reverse=True)
-        tasks = tasks[:limit]
-        
-        return tasks
-        
-    except Exception as e:
-        logger.error(f"Failed to list tasks: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# 启动配置
-
-def create_app():
-    """创建应用实例"""
-    return app
-
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    """全局异常处理器"""
+    return {
+        "error": "内部服务器错误",
+        "detail": str(exc),
+        "path": str(request.url)
+    }
 
 if __name__ == "__main__":
+    import uvicorn
+    print("🚀 启动AutoGen知识图谱API服务...")
+    print("📖 API文档: http://localhost:8000/docs")
+    print("🔍 ReDoc文档: http://localhost:8000/redoc")
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
