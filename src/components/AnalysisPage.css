@@ -1,0 +1,621 @@
+/* AnalysisPage 双栏布局样式 */
+
+.analysis-page {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+/* ===================== 左侧输入面板 ===================== */
+
+.input-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border-right: 2px solid rgba(0, 212, 255, 0.2);
+  background: rgba(15, 15, 35, 0.6);
+  backdrop-filter: blur(10px);
+  overflow-y: auto;
+}
+
+.input-panel .panel-header {
+  margin-bottom: 24px;
+}
+
+.input-panel .panel-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  color: #00D4FF;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.input-panel .panel-header p {
+  margin: 0;
+  color: #B0B0B0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* 文本输入区域 */
+.textarea-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.text-input {
+  flex: 1;
+  min-height: 200px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(0, 212, 255, 0.3);
+  border-radius: 12px;
+  color: #ffffff;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  transition: all 0.3s ease;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: rgba(0, 212, 255, 0.8);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+}
+
+.text-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.text-input::placeholder {
+  color: #666;
+  line-height: 1.6;
+}
+
+.text-info {
+  margin-top: 8px;
+  text-align: right;
+  color: #888;
+  font-size: 12px;
+}
+
+/* 示例文本区域 */
+.sample-texts {
+  margin-bottom: 20px;
+}
+
+.sample-texts h4 {
+  margin: 0 0 12px 0;
+  color: #00D4FF;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sample-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sample-button {
+  padding: 8px 16px;
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 20px;
+  color: #00D4FF;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sample-button:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.sample-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 操作按钮区域 */
+.action-container {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.analyze-button {
+  flex: 1;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #00D4FF 0%, #0099CC 100%);
+  border: none;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.analyze-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #00E5FF 0%, #00B3E6 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+}
+
+.analyze-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.analyze-button.loading {
+  background: linear-gradient(135deg, #666 0%, #444 100%);
+}
+
+.reset-button {
+  padding: 16px 20px;
+  background: rgba(255, 107, 107, 0.2);
+  border: 2px solid rgba(255, 107, 107, 0.4);
+  border-radius: 12px;
+  color: #FF6B6B;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.reset-button:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.3);
+  transform: translateY(-1px);
+}
+
+/* 状态显示区域 */
+.status-container {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: auto;
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.status-indicator {
+  font-size: 20px;
+  animation: pulse 2s infinite;
+}
+
+.status-indicator.processing {
+  animation: spin 1s linear infinite;
+}
+
+.status-text {
+  font-weight: 600;
+  color: #00D4FF;
+}
+
+.progress-container {
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00D4FF 0%, #00FF88 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  color: #00D4FF;
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 40px;
+}
+
+.status-message {
+  color: #B0B0B0;
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.task-info {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  color: #888;
+}
+
+.task-info code {
+  background: rgba(0, 212, 255, 0.1);
+  color: #00D4FF;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', monospace;
+}
+
+/* ===================== 右侧图谱面板 ===================== */
+
+.graph-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  background: rgba(10, 10, 20, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.graph-panel .panel-header {
+  margin-bottom: 24px;
+}
+
+.graph-panel .panel-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  color: #00D4FF;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.graph-panel .panel-header p {
+  margin: 0;
+  color: #B0B0B0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* 图谱容器 */
+.graph-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(0, 212, 255, 0.2);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 欢迎状态 */
+.welcome-message {
+  text-align: center;
+  padding: 40px;
+  max-width: 400px;
+}
+
+.welcome-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.welcome-message h3 {
+  margin: 0 0 16px 0;
+  color: #00D4FF;
+  font-size: 24px;
+}
+
+.welcome-message p {
+  margin: 0 0 32px 0;
+  color: #B0B0B0;
+  line-height: 1.6;
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 8px;
+}
+
+.feature-icon {
+  font-size: 24px;
+}
+
+/* 处理状态 */
+.processing-message {
+  text-align: center;
+  padding: 40px;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(0, 212, 255, 0.2);
+  border-left: 4px solid #00D4FF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 24px;
+}
+
+.processing-message h3 {
+  margin: 0 0 16px 0;
+  color: #00D4FF;
+  font-size: 20px;
+}
+
+.processing-message p {
+  margin: 0 0 20px 0;
+  color: #B0B0B0;
+}
+
+.mini-progress {
+  width: 200px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.mini-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #00D4FF 0%, #00FF88 100%);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* 图谱画布容器 */
+.graph-canvas-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.graph-controls-info {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.control-tip {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #B0B0B0;
+}
+
+/* 错误状态 */
+.error-message {
+  text-align: center;
+  padding: 40px;
+}
+
+.error-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  animation: shake 0.5s ease-in-out;
+}
+
+.error-message h3 {
+  margin: 0 0 16px 0;
+  color: #FF6B6B;
+  font-size: 20px;
+}
+
+.error-message p {
+  margin: 0 0 24px 0;
+  color: #B0B0B0;
+}
+
+.retry-button {
+  padding: 12px 24px;
+  background: rgba(255, 107, 107, 0.2);
+  border: 2px solid rgba(255, 107, 107, 0.4);
+  border-radius: 8px;
+  color: #FF6B6B;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retry-button:hover {
+  background: rgba(255, 107, 107, 0.3);
+  transform: translateY(-1px);
+}
+
+/* 空状态 */
+.empty-message {
+  text-align: center;
+  padding: 40px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  opacity: 0.6;
+}
+
+.empty-message h3 {
+  margin: 0 0 16px 0;
+  color: #888;
+  font-size: 20px;
+}
+
+.empty-message p {
+  margin: 0;
+  color: #666;
+}
+
+/* ===================== 动画效果 ===================== */
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* ===================== 响应式设计 ===================== */
+
+@media (max-width: 1024px) {
+  .analysis-page {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .input-panel,
+  .graph-panel {
+    flex: none;
+    min-height: 50vh;
+  }
+  
+  .input-panel {
+    border-right: none;
+    border-bottom: 2px solid rgba(0, 212, 255, 0.2);
+  }
+  
+  .action-container {
+    flex-direction: column;
+  }
+  
+  .sample-buttons {
+    justify-content: center;
+  }
+  
+  .control-tip {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .analysis-page {
+    padding: 0;
+  }
+  
+  .input-panel,
+  .graph-panel {
+    padding: 16px;
+  }
+  
+  .text-input {
+    min-height: 150px;
+    font-size: 16px; /* 防止iOS缩放 */
+  }
+  
+  .analyze-button {
+    padding: 14px 20px;
+    font-size: 14px;
+  }
+  
+  .welcome-message,
+  .processing-message,
+  .error-message {
+    padding: 20px;
+  }
+  
+  .welcome-icon,
+  .error-icon,
+  .empty-icon {
+    font-size: 48px;
+  }
+}
+
+/* ===================== 深色主题优化 ===================== */
+
+.analysis-page {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 212, 255, 0.3) rgba(0, 0, 0, 0.2);
+}
+
+.analysis-page::-webkit-scrollbar {
+  width: 8px;
+}
+
+.analysis-page::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.analysis-page::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.3);
+  border-radius: 4px;
+}
+
+.analysis-page::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.5);
+}
+
+/* 选择文本时的颜色 */
+::selection {
+  background: rgba(0, 212, 255, 0.3);
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background: rgba(0, 212, 255, 0.3);
+  color: #ffffff;
+} 

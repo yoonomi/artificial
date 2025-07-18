@@ -1,39 +1,31 @@
-.App {
-  width: 100vw;
-  height: 100vh;
+/* App.css - 全局样式重置 */
+
+* {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
   overflow: hidden;
-  background: #0a0a0a;
 }
 
-/* 自定义滚动条样式 */
-::-webkit-scrollbar {
-  width: 8px;
+.App {
+  height: 100vh;
+  width: 100vw;
 }
 
-::-webkit-scrollbar-track {
-  background: #2a2a2a;
+/* 移除所有默认的React样式 */
+.App-logo {
+  display: none;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #00D4FF;
-  border-radius: 4px;
+.App-header {
+  display: none;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #0099CC;
-}
-
-/* 确保Canvas全屏显示 */
-canvas {
-  display: block !important;
-}
-
-/* 禁止文本选择，避免拖拽时出现选择 */
-* {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+.App-link {
+  display: none;
 } 

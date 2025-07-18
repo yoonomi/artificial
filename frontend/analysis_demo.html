@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoGen 知识图谱分析平台 - 双栏布局</title>
+    <style>
+        /* ================================
+           双栏布局样式
+           ================================ */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            overflow: hidden;
+        }
+
+        .analysis-page {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ================================
+           左侧输入面板
+           ================================ */
+
+        .input-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.95);
+            border-right: 2px solid rgba(42, 82, 152, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-header {
+            padding: 25px 30px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .panel-header h2 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-header p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .input-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            gap: 20px;
+        }
+
+        .text-input {
+            flex: 1;
+            width: 100%;
+            padding: 20px;
+            border: 2px solid #e1e8ed;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            resize: none;
+            background: #fafbfc;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .text-input:focus {
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .text-input::placeholder {
+            color: #8899a6;
+            font-style: italic;
+        }
+
+        .input-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-top: 1px solid #e1e8ed;
+        }
+
+        .text-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #657786;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .clear-button, .analyze-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+
+        .clear-button {
+            background: #f7f9fa;
+            color: #657786;
+            border: 1px solid #e1e8ed;
+        }
+
+        .clear-button:hover:not(:disabled) {
+            background: #e1e8ed;
+            transform: translateY(-1px);
+        }
+
+        .clear-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .analyze-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-width: 180px;
+            justify-content: center;
+        }
+
+        .analyze-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .analyze-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ================================
+           右侧图谱面板
+           ================================ */
+
+        .graph-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .graph-panel .panel-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+
+        .graph-section {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+        }
+
+        /* ================================
+           欢迎状态
+           ================================ */
+
+        .welcome-state {
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .welcome-icon {
+            font-size: 80px;
+            margin-bottom: 30px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .welcome-state h3 {
+            font-size: 28px;
+            margin: 0 0 15px 0;
+            font-weight: 300;
+            color: #e1e8ed;
+        }
+
+        .welcome-state p {
+            font-size: 16px;
+            color: #8899a6;
+            margin: 0 0 40px 0;
+            line-height: 1.6;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            font-size: 20px;
+        }
+
+        /* ================================
+           分析状态
+           ================================ */
+
+        .analysis-state {
+            text-align: center;
+            max-width: 600px;
+        }
+
+        .analyzing-state h3 {
+            font-size: 24px;
+            margin: 30px 0 15px 0;
+            color: #e1e8ed;
+        }
+
+        .analysis-status {
+            font-size: 16px;
+            color: #8899a6;
+            margin: 0 0 40px 0;
+        }
+
+        .analysis-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .spinner-ring {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .spinner-ring:nth-child(2) {
+            animation-delay: -0.3s;
+        }
+
+        .spinner-ring:nth-child(3) {
+            animation-delay: -0.6s;
+        }
+
+        .analysis-steps {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #657786;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            color: #667eea;
+        }
+
+        .step-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #657786;
+            transition: all 0.3s ease;
+        }
+
+        .step.active .step-dot {
+            background: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+
+        /* ================================
+           完成状态
+           ================================ */
+
+        .completed-state {
+            text-align: center;
+        }
+
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 30px;
+            animation: bounce 1s ease-in-out;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 60%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-20px); }
+            80% { transform: translateY(-10px); }
+        }
+
+        .completed-state h3 {
+            font-size: 28px;
+            margin: 0 0 15px 0;
+            color: #4caf50;
+        }
+
+        .completed-state p {
+            font-size: 16px;
+            color: #8899a6;
+            margin: 0;
+        }
+
+        /* ================================
+           API状态指示器
+           ================================ */
+
+        .api-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .api-status.connected {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .api-status.disconnected {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ================================
+           响应式设计
+           ================================ */
+
+        @media (max-width: 1024px) {
+            .analysis-page {
+                flex-direction: column;
+            }
+            
+            .input-panel, .graph-panel {
+                flex: none;
+                height: 50vh;
+            }
+            
+            .feature-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .analysis-steps {
+                flex-wrap: wrap;
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .panel-header {
+                padding: 20px;
+            }
+            
+            .input-section {
+                padding: 20px;
+            }
+            
+            .panel-header h2 {
+                font-size: 20px;
+            }
+            
+            .text-input {
+                padding: 15px;
+                font-size: 14px;
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .analyze-button {
+                min-width: auto;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="analysis-page">
+        <!-- 左侧输入面板 -->
+        <div class="input-panel">
+            <div class="panel-header">
+                <h2>📝 文本输入</h2>
+                <p>粘贴或输入您要分析的文本内容</p>
+            </div>
+            
+            <div class="input-section">
+                <textarea
+                    id="textInput"
+                    class="text-input"
+                    placeholder="在此处粘贴您的长文本...
+
+例如：
+人工智能（Artificial Intelligence, AI）是计算机科学的一个分支，旨在创建能够执行通常需要人类智能的任务的系统。机器学习是人工智能的一个重要子领域，通过算法让计算机从数据中学习。深度学习是机器学习的一个分支，使用神经网络来模拟人脑的工作方式。
+
+支持中英文文本分析，自动提取关键概念和关系。"
+                    rows="12"
+                ></textarea>
+                
+                <div class="input-controls">
+                    <div class="text-stats">
+                        <span class="char-count">
+                            字符数: <span id="charCount">0</span>
+                        </span>
+                        <span class="word-count">
+                            词数: <span id="wordCount">0</span>
+                        </span>
+                    </div>
+                    
+                    <div class="control-buttons">
+                        <button class="clear-button" id="clearButton" disabled>
+                            🗑️ 清空
+                        </button>
+                        
+                        <button class="analyze-button" id="analyzeButton" disabled>
+                            🧠 生成知识图谱
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧图谱面板 -->
+        <div class="graph-panel">
+            <div class="panel-header">
+                <h2>🌐 知识图谱</h2>
+                <p>分析结果的3D可视化展示</p>
+            </div>
+            
+            <div class="graph-section">
+                <!-- API状态指示器 -->
+                <div class="api-status disconnected" id="apiStatus">
+                    <div class="status-dot"></div>
+                    <span>检查API连接中...</span>
+                </div>
+
+                <!-- 欢迎状态 -->
+                <div class="welcome-state" id="welcomeState">
+                    <div class="welcome-icon">🎯</div>
+                    <h3>分析结果将在此处展示</h3>
+                    <p>请在左侧输入文本，点击"生成知识图谱"开始分析</p>
+                    
+                    <div class="feature-list">
+                        <div class="feature-item">
+                            <span class="feature-icon">🔍</span>
+                            <span>智能关键词提取</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🔗</span>
+                            <span>自动关系识别</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🎨</span>
+                            <span>3D交互式可视化</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">📊</span>
+                            <span>动态布局切换</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分析状态 -->
+                <div class="analysis-state" id="analysisState" style="display: none;">
+                    <!-- 分析中状态 -->
+                    <div class="analyzing-state" id="analyzingState">
+                        <div class="analysis-spinner">
+                            <div class="spinner-ring"></div>
+                            <div class="spinner-ring"></div>
+                            <div class="spinner-ring"></div>
+                        </div>
+                        <h3>正在分析您的文本...</h3>
+                        <p class="analysis-status" id="analysisStatusText">开始分析...</p>
+                        
+                        <div class="analysis-steps">
+                            <div class="step" id="step1">
+                                <div class="step-dot"></div>
+                                <span>文本预处理</span>
+                            </div>
+                            <div class="step" id="step2">
+                                <div class="step-dot"></div>
+                                <span>关键词提取</span>
+                            </div>
+                            <div class="step" id="step3">
+                                <div class="step-dot"></div>
+                                <span>关系识别</span>
+                            </div>
+                            <div class="step" id="step4">
+                                <div class="step-dot"></div>
+                                <span>图谱构建</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 完成状态 -->
+                    <div class="completed-state" id="completedState" style="display: none;">
+                        <div class="success-icon">✅</div>
+                        <h3>分析完成</h3>
+                        <p id="resultSummary">知识图谱已生成，包含 X 个节点和 Y 个关系</p>
+                        <!-- 这里将来会放置3D图谱组件 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================================
+        // 全局变量
+        // ================================
+        
+        const API_BASE_URL = 'http://localhost:8000';
+        let currentTaskId = null;
+        let isAnalyzing = false;
+
+        // DOM元素
+        const textInput = document.getElementById('textInput');
+        const charCount = document.getElementById('charCount');
+        const wordCount = document.getElementById('wordCount');
+        const clearButton = document.getElementById('clearButton');
+        const analyzeButton = document.getElementById('analyzeButton');
+        const apiStatus = document.getElementById('apiStatus');
+        const welcomeState = document.getElementById('welcomeState');
+        const analysisState = document.getElementById('analysisState');
+        const analyzingState = document.getElementById('analyzingState');
+        const completedState = document.getElementById('completedState');
+        const analysisStatusText = document.getElementById('analysisStatusText');
+        const resultSummary = document.getElementById('resultSummary');
+
+        // ================================
+        // 初始化
+        // ================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 初始化AutoGen知识图谱分析平台');
+            
+            // 绑定事件监听器
+            textInput.addEventListener('input', updateTextStats);
+            clearButton.addEventListener('click', clearText);
+            analyzeButton.addEventListener('click', startAnalysis);
+            
+            // 检查API连接
+            checkAPIConnection();
+            
+            // 更新初始状态
+            updateTextStats();
+        });
+
+        // ================================
+        // 文本处理函数
+        // ================================
+
+        function updateTextStats() {
+            const text = textInput.value;
+            const charLength = text.length;
+            const wordLength = text.trim() ? text.trim().split(/\s+/).length : 0;
+            
+            charCount.textContent = charLength;
+            wordCount.textContent = wordLength;
+            
+            // 更新按钮状态
+            const hasText = text.trim().length > 0;
+            clearButton.disabled = !hasText;
+            analyzeButton.disabled = !hasText || isAnalyzing;
+        }
+
+        function clearText() {
+            textInput.value = '';
+            updateTextStats();
+            
+            // 重置右侧面板
+            resetAnalysisPanel();
+        }
+
+        function resetAnalysisPanel() {
+            welcomeState.style.display = 'block';
+            analysisState.style.display = 'none';
+            currentTaskId = null;
+        }
+
+        // ================================
+        // API通信函数
+        // ================================
+
+        async function checkAPIConnection() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/health`);
+                if (response.ok) {
+                    apiStatus.className = 'api-status connected';
+                    apiStatus.innerHTML = '<div class="status-dot"></div><span>API已连接</span>';
+                    console.log('✅ API连接成功');
+                } else {
+                    throw new Error('API响应异常');
+                }
+            } catch (error) {
+                apiStatus.className = 'api-status disconnected';
+                apiStatus.innerHTML = '<div class="status-dot"></div><span>API连接失败</span>';
+                console.log('❌ API连接失败:', error);
+            }
+        }
+
+        async function startAnalysis() {
+            const text = textInput.value.trim();
+            if (!text || isAnalyzing) return;
+
+            console.log('🧠 开始文本分析...');
+            
+            isAnalyzing = true;
+            analyzeButton.disabled = true;
+            analyzeButton.innerHTML = '<div class="loading-spinner"></div> 分析中...';
+            
+            // 切换到分析状态
+            welcomeState.style.display = 'none';
+            analysisState.style.display = 'block';
+            completedState.style.display = 'none';
+            analyzingState.style.display = 'block';
+
+            try {
+                // 1. 启动分析任务
+                const startResponse = await fetch(`${API_BASE_URL}/api/start-analysis`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                if (!startResponse.ok) {
+                    throw new Error('启动分析失败');
+                }
+
+                const startData = await startResponse.json();
+                currentTaskId = startData.task_id;
+                console.log('📝 任务已创建:', currentTaskId);
+
+                // 2. 轮询任务状态
+                await pollTaskStatus();
+
+            } catch (error) {
+                console.error('❌ 分析失败:', error);
+                analysisStatusText.textContent = '分析失败，请重试';
+                resetAnalysisControls();
+            }
+        }
+
+        async function pollTaskStatus() {
+            if (!currentTaskId) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/analysis-status/${currentTaskId}`);
+                if (!response.ok) {
+                    throw new Error('获取任务状态失败');
+                }
+
+                const data = await response.json();
+                console.log('📊 任务状态:', data);
+
+                // 更新状态显示
+                analysisStatusText.textContent = data.message || '处理中...';
+                updateProgressSteps(data.progress || 0);
+
+                if (data.status === 'COMPLETED') {
+                    console.log('✅ 分析完成');
+                    await showResults();
+                } else if (data.status === 'FAILED') {
+                    throw new Error(data.error || '分析失败');
+                } else if (data.status === 'PROCESSING' || data.status === 'PENDING') {
+                    // 继续轮询
+                    setTimeout(pollTaskStatus, 1000);
+                } else {
+                    throw new Error('未知任务状态: ' + data.status);
+                }
+
+            } catch (error) {
+                console.error('❌ 轮询状态失败:', error);
+                analysisStatusText.textContent = '获取状态失败，请重试';
+                resetAnalysisControls();
+            }
+        }
+
+        async function showResults() {
+            if (!currentTaskId) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/graph-data/${currentTaskId}`);
+                if (!response.ok) {
+                    throw new Error('获取图谱数据失败');
+                }
+
+                const data = await response.json();
+                console.log('📈 图谱数据:', data);
+
+                // 显示结果摘要
+                const nodeCount = data.nodes ? data.nodes.length : 0;
+                const edgeCount = data.edges ? data.edges.length : 0;
+                resultSummary.textContent = `知识图谱已生成，包含 ${nodeCount} 个节点和 ${edgeCount} 个关系`;
+
+                // 切换到完成状态
+                analyzingState.style.display = 'none';
+                completedState.style.display = 'block';
+
+                // 重置控制按钮
+                resetAnalysisControls();
+
+                console.log('🎉 分析流程完成');
+
+            } catch (error) {
+                console.error('❌ 获取结果失败:', error);
+                analysisStatusText.textContent = '获取结果失败，请重试';
+                resetAnalysisControls();
+            }
+        }
+
+        function updateProgressSteps(progress) {
+            const steps = ['step1', 'step2', 'step3', 'step4'];
+            const stepThresholds = [25, 50, 75, 100];
+
+            steps.forEach((stepId, index) => {
+                const stepElement = document.getElementById(stepId);
+                if (progress >= stepThresholds[index]) {
+                    stepElement.classList.add('active');
+                } else {
+                    stepElement.classList.remove('active');
+                }
+            });
+        }
+
+        function resetAnalysisControls() {
+            isAnalyzing = false;
+            analyzeButton.innerHTML = '🧠 生成知识图谱';
+            updateTextStats(); // 这会重新设置按钮状态
+        }
+
+        // ================================
+        // 错误处理
+        // ================================
+
+        window.addEventListener('error', function(e) {
+            console.error('🚨 页面错误:', e.error);
+        });
+
+        // ================================
+        // 页面加载完成提示
+        // ================================
+
+        window.addEventListener('load', function() {
+            console.log('🎯 AutoGen知识图谱分析平台已加载完成');
+            console.log('📖 使用说明:');
+            console.log('   1. 在左侧输入框中粘贴或输入文本');
+            console.log('   2. 点击"生成知识图谱"按钮开始分析');
+            console.log('   3. 右侧将显示分析进度和结果');
+            console.log('   4. 完成后可查看3D知识图谱可视化');
+        });
+    </script>
+</body>
+</html> 

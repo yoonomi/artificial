@@ -1,11 +1,11 @@
 import React from 'react';
-import KnowledgeGraph from './components/KnowledgeGraph';
+import AnalysisPage from './components/AnalysisPage';
 import './App.css';
 
 function App() {
   return (
     <div className="App">
-      <KnowledgeGraph />
+      <AnalysisPage />
     </div>
   );
 }
