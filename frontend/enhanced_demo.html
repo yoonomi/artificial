@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoGen 3D知识图谱 - 视觉丰富化演示</title>
+    <title>AutoGen 3D知识图谱 - 视觉增强版</title>
     <style>
         body, html {
             margin: 0;
             padding: 0;
             font-family: 'Microsoft YaHei', Arial, sans-serif;
-            background: #111111;
+            background: #000000;
             overflow: hidden;
             height: 100vh;
             width: 100vw;
@@ -25,16 +25,16 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.95);
+            background: rgba(15, 15, 30, 0.95);
             color: white;
             padding: 20px;
             border-radius: 12px;
             font-size: 14px;
             backdrop-filter: blur(15px);
             border: 1px solid rgba(0, 212, 255, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
             z-index: 1000;
-            max-width: 320px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            max-width: 300px;
         }
         
         .control-panel h3 {
@@ -63,19 +63,13 @@
             border-top: 1px solid rgba(0, 212, 255, 0.3);
         }
         
-        .enhancement-info {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid rgba(255, 107, 107, 0.3);
-            background: rgba(255, 107, 107, 0.1);
+        .enhancement-note {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
             padding: 10px;
-            border-radius: 6px;
-        }
-        
-        .enhancement-info h4 {
-            margin: 0 0 8px 0;
-            color: #FF6B6B;
-            font-size: 14px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 11px;
         }
         
         .loading {
@@ -121,7 +115,7 @@
 </head>
 <body>
     <div id="graph-container">
-        <div class="loading" id="loading">正在加载增强版3D知识图谱...</div>
+        <div class="loading" id="loading">正在加载3D知识图谱...</div>
         
         <div class="control-panel">
             <h3>🧠 AutoGen 3D知识图谱</h3>
@@ -151,52 +145,60 @@
                     <span>📏</span>节点大小: <strong>基于中心度</strong>
                 </div>
             </div>
-            
-            <div class="enhancement-info">
-                <h4>🚀 视觉增强功能</h4>
-                <div class="control-item">
-                    <span>🎯</span>中心节点更大更突出
-                </div>
-                <div class="control-item">
-                    <span>🌙</span>深色主题科技感
-                </div>
-                <div class="control-item">
-                    <span>💡</span>智能节点大小分配
-                </div>
+            <div class="enhancement-note">
+                ✨ <strong>视觉增强版特性:</strong><br>
+                • 深色主题提升科技感<br>
+                • 节点大小反映重要性<br>
+                • 增强的光影效果<br>
+                • 优化的配色方案
             </div>
         </div>
     </div>
 
-    <!-- 使用Three.js直接创建3D图谱 -->
+    <!-- 使用Three.js创建增强版3D图谱 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     
     <script>
         console.log('开始初始化增强版3D知识图谱...');
         
-        // AutoGen系统提取的中文知识图谱数据 - 增强版
+        // 计算节点的中心度（连接数）
+        function calculateCentrality() {
+            const centralityMap = {};
+            
+            // 初始化所有节点的中心度为0
+            graphData.nodes.forEach(node => {
+                centralityMap[node.id] = 0;
+            });
+            
+            // 计算每个节点的连接数
+            graphData.edges.forEach(edge => {
+                centralityMap[edge.source] = (centralityMap[edge.source] || 0) + 1;
+                centralityMap[edge.target] = (centralityMap[edge.target] || 0) + 1;
+            });
+            
+            console.log('节点中心度:', centralityMap);
+            return centralityMap;
+        }
+        
+        // AutoGen系统提取的中文知识图谱数据（增强版）
         const graphData = {
             nodes: [
-                // 中心度高的核心节点 - 更大尺寸
-                { id: 1, label: '人工智能技术', color: '#FF6B6B', size: 3.5, x: 0, y: 0, z: 0, centrality: 8 },
-                { id: 7, label: '深度学习', color: '#98D8C8', size: 2.8, x: 2, y: -3, z: 5, centrality: 5 },
-                { id: 8, label: '机器学习', color: '#A8E6CF', size: 2.6, x: -2, y: -4, z: 4, centrality: 4 },
-                
-                // 中等连接度的节点
-                { id: 2, label: 'OpenAI', color: '#4ECDC4', size: 2.2, x: 5, y: 2, z: 3, centrality: 3 },
-                { id: 5, label: 'DeepMind', color: '#FFEAA7', size: 2.2, x: -5, y: 4, z: -2, centrality: 3 },
-                { id: 9, label: '自然语言处理', color: '#FFB6C1', size: 2.0, x: 6, y: -2, z: -3, centrality: 3 },
-                { id: 10, label: '计算机视觉', color: '#87CEEB', size: 2.0, x: -6, y: -1, z: 3, centrality: 3 },
-                { id: 13, label: '神经网络', color: '#FFA07A', size: 2.4, x: 0, y: -6, z: 2, centrality: 4 },
-                
-                // 低连接度的叶子节点 - 较小尺寸
-                { id: 3, label: 'GPT', color: '#45B7D1', size: 1.5, x: 8, y: 1, z: 2, centrality: 2 },
-                { id: 4, label: 'ChatGPT', color: '#96CEB4', size: 1.4, x: 10, y: 3, z: 1, centrality: 1 },
-                { id: 6, label: 'AlphaGo', color: '#DDA0DD', size: 1.5, x: -8, y: 2, z: -4, centrality: 2 },
-                { id: 11, label: '阿兰·图灵', color: '#F0E68C', size: 1.8, x: 3, y: 6, z: -1, centrality: 2 },
-                { id: 12, label: '图灵测试', color: '#E6E6FA', size: 1.2, x: 5, y: 7, z: 0, centrality: 1 },
-                { id: 14, label: '李世石', color: '#20B2AA', size: 1.0, x: -10, y: 3, z: -6, centrality: 1 },
-                { id: 15, label: '腾讯', color: '#DAA520', size: 1.3, x: 4, y: 5, z: -5, centrality: 1 }
+                { id: 1, label: '人工智能技术', color: '#FF4757', x: 0, y: 0, z: 0 },
+                { id: 2, label: 'OpenAI', color: '#5DADE2', x: 5, y: 2, z: 3 },
+                { id: 3, label: 'GPT', color: '#48CAE4', x: 8, y: 1, z: 2 },
+                { id: 4, label: 'ChatGPT', color: '#06FFA5', x: 10, y: 3, z: 1 },
+                { id: 5, label: 'DeepMind', color: '#FFB142', x: -5, y: 4, z: -2 },
+                { id: 6, label: 'AlphaGo', color: '#DDA0DD', x: -8, y: 2, z: -4 },
+                { id: 7, label: '深度学习', color: '#54A0FF', x: 2, y: -3, z: 5 },
+                { id: 8, label: '机器学习', color: '#5F27CD', x: -2, y: -4, z: 4 },
+                { id: 9, label: '自然语言处理', color: '#FF6B9D', x: 6, y: -2, z: -3 },
+                { id: 10, label: '计算机视觉', color: '#C44569', x: -6, y: -1, z: 3 },
+                { id: 11, label: '阿兰·图灵', color: '#F8C471', x: 3, y: 6, z: -1 },
+                { id: 12, label: '图灵测试', color: '#BB6BD9', x: 5, y: 7, z: 0 },
+                { id: 13, label: '神经网络', color: '#FF7675', x: 0, y: -6, z: 2 },
+                { id: 14, label: '李世石', color: '#74B9FF', x: -10, y: 3, z: -6 },
+                { id: 15, label: '腾讯', color: '#FDCB6E', x: 4, y: 5, z: -5 }
             ],
             edges: [
                 { source: 2, target: 3, label: '开发' },
@@ -217,6 +219,21 @@
             ]
         };
 
+        // 计算中心度并更新节点大小
+        const centralityMap = calculateCentrality();
+        const maxCentrality = Math.max(...Object.values(centralityMap));
+        const minCentrality = Math.min(...Object.values(centralityMap));
+
+        // 基于中心度调整节点大小
+        graphData.nodes.forEach(node => {
+            const centrality = centralityMap[node.id] || 0;
+            // 将中心度映射到大小范围 0.8 - 3.0
+            const normalizedCentrality = (centrality - minCentrality) / (maxCentrality - minCentrality);
+            node.size = 0.8 + normalizedCentrality * 2.2;
+            
+            console.log(`节点 ${node.label}: 中心度=${centrality}, 大小=${node.size.toFixed(2)}`);
+        });
+
         // 初始化3D场景
         let scene, camera, renderer, controls;
         let nodeObjects = {};
@@ -226,20 +243,25 @@
             console.log('正在初始化增强版Three.js场景...');
             
             try {
-                // 创建场景 - 更深的背景色
+                // 创建场景 - 更深的黑色背景
                 scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x050505);
+                scene.background = new THREE.Color(0x000000);
+                
+                // 添加星空背景效果
+                createStarField();
 
                 // 创建相机
                 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
                 camera.position.set(25, 25, 25);
 
-                // 创建渲染器 - 增强渲染效果
-                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                // 创建渲染器 - 增强的渲染设置
+                renderer = new THREE.WebGLRenderer({ 
+                    antialias: true,
+                    alpha: true
+                });
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 renderer.shadowMap.enabled = true;
                 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-                renderer.toneMapping = THREE.ACESFilmicToneMapping;
                 renderer.toneMappingExposure = 1.2;
                 
                 document.getElementById('graph-container').appendChild(renderer.domElement);
@@ -251,24 +273,11 @@
                 controls.enableZoom = true;
                 controls.enablePan = true;
                 controls.enableRotate = true;
-                controls.autoRotate = true;
-                controls.autoRotateSpeed = 0.5;
+                controls.maxDistance = 100;
+                controls.minDistance = 10;
 
-                // 增强光源设置
-                const ambientLight = new THREE.AmbientLight(0x202020, 0.4);
-                scene.add(ambientLight);
-
-                const directionalLight = new THREE.DirectionalLight(0x4080ff, 1.2);
-                directionalLight.position.set(15, 15, 15);
-                directionalLight.castShadow = true;
-                directionalLight.shadow.mapSize.width = 2048;
-                directionalLight.shadow.mapSize.height = 2048;
-                scene.add(directionalLight);
-
-                // 添加点光源增强科技感
-                const pointLight = new THREE.PointLight(0x00D4FF, 0.8, 50);
-                pointLight.position.set(0, 10, 0);
-                scene.add(pointLight);
+                // 增强的光源系统
+                addEnhancedLighting();
 
                 // 创建节点和边
                 createEnhancedNodes();
@@ -291,26 +300,66 @@
             }
         }
 
+        function createStarField() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starCount = 200;
+            const positions = new Float32Array(starCount * 3);
+            
+            for (let i = 0; i < starCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 200;     // x
+                positions[i + 1] = (Math.random() - 0.5) * 200; // y
+                positions[i + 2] = (Math.random() - 0.5) * 200; // z
+            }
+            
+            starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0x00D4FF,
+                size: 0.5,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+        }
+
+        function addEnhancedLighting() {
+            // 环境光
+            const ambientLight = new THREE.AmbientLight(0x404080, 0.4);
+            scene.add(ambientLight);
+
+            // 主方向光
+            const directionalLight = new THREE.DirectionalLight(0x00D4FF, 0.6);
+            directionalLight.position.set(15, 15, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            // 辅助光源
+            const pointLight1 = new THREE.PointLight(0xFF6B6B, 0.3, 50);
+            pointLight1.position.set(-10, 10, -10);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0x48CAE4, 0.3, 50);
+            pointLight2.position.set(10, -10, 10);
+            scene.add(pointLight2);
+        }
+
         function createEnhancedNodes() {
             console.log('创建增强版节点...');
             
             graphData.nodes.forEach(nodeData => {
                 try {
-                    // 基于中心度调整节点大小
-                    const baseSize = nodeData.size;
-                    const centralityMultiplier = 1 + (nodeData.centrality * 0.2);
-                    const adjustedSize = baseSize * centralityMultiplier;
-                    
-                    // 创建球体几何 - 更高质量
-                    const geometry = new THREE.SphereGeometry(adjustedSize, 64, 64);
-                    const material = new THREE.MeshStandardMaterial({ 
+                    // 创建主球体 - 大小基于中心度
+                    const geometry = new THREE.SphereGeometry(nodeData.size, 32, 32);
+                    const material = new THREE.MeshPhongMaterial({ 
                         color: nodeData.color,
                         transparent: true,
-                        opacity: 0.85,
-                        metalness: 0.3,
-                        roughness: 0.4,
-                        emissive: nodeData.color,
-                        emissiveIntensity: 0.1
+                        opacity: 0.9,
+                        shininess: 100,
+                        emissive: new THREE.Color(nodeData.color).multiplyScalar(0.1)
                     });
                     
                     const sphere = new THREE.Mesh(geometry, material);
@@ -319,42 +368,58 @@
                     sphere.receiveShadow = true;
                     sphere.userData = nodeData;
                     
-                    // 增强发光效果 - 基于中心度
-                    const glowSize = adjustedSize * (1.3 + nodeData.centrality * 0.1);
-                    const glowGeometry = new THREE.SphereGeometry(glowSize, 32, 32);
-                    const glowMaterial = new THREE.MeshBasicMaterial({
-                        color: nodeData.color,
-                        transparent: true,
-                        opacity: 0.15 + nodeData.centrality * 0.02
-                    });
-                    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-                    glow.position.copy(sphere.position);
-                    scene.add(glow);
+                    // 增强的发光效果 - 基于中心度的多层光晕
+                    const glowLayers = 3;
+                    const glows = [];
+                    
+                    for (let i = 0; i < glowLayers; i++) {
+                        const glowSize = nodeData.size * (1.3 + i * 0.3);
+                        const glowOpacity = 0.15 / (i + 1);
+                        
+                        const glowGeometry = new THREE.SphereGeometry(glowSize, 16, 16);
+                        const glowMaterial = new THREE.MeshBasicMaterial({
+                            color: nodeData.color,
+                            transparent: true,
+                            opacity: glowOpacity
+                        });
+                        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                        glow.position.copy(sphere.position);
+                        scene.add(glow);
+                        glows.push(glow);
+                    }
 
-                    // 添加文字标签 - 改进字体渲染
+                    // 增强的文字标签
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
                     canvas.width = 512;
                     canvas.height = 128;
                     
-                    // 清晰的文字渲染
+                    // 渐变背景
+                    const gradient = context.createLinearGradient(0, 0, 512, 0);
+                    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+                    gradient.addColorStop(0.5, 'rgba(0, 212, 255, 0.2)');
+                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+                    context.fillStyle = gradient;
+                    context.fillRect(0, 0, 512, 128);
+                    
+                    // 文字
                     context.fillStyle = '#FFFFFF';
-                    context.font = `${28 + nodeData.centrality * 4}px Microsoft YaHei, Arial`;
+                    context.font = 'bold 28px Microsoft YaHei, Arial';
                     context.textAlign = 'center';
-                    context.textBaseline = 'middle';
-                    context.shadowColor = '#000000';
-                    context.shadowBlur = 4;
-                    context.fillText(nodeData.label, 256, 64);
+                    context.strokeStyle = nodeData.color;
+                    context.lineWidth = 2;
+                    context.strokeText(nodeData.label, 256, 75);
+                    context.fillText(nodeData.label, 256, 75);
                     
                     const texture = new THREE.CanvasTexture(canvas);
                     const labelMaterial = new THREE.SpriteMaterial({ 
                         map: texture, 
                         transparent: true,
-                        alphaTest: 0.1
+                        alphaTest: 0.001
                     });
                     const label = new THREE.Sprite(labelMaterial);
-                    label.position.set(nodeData.x, nodeData.y + adjustedSize + 1.5, nodeData.z);
-                    label.scale.set(6 + nodeData.centrality * 0.5, 1.5, 1);
+                    label.position.set(nodeData.x, nodeData.y + nodeData.size + 2, nodeData.z);
+                    label.scale.set(6, 1.5, 1);
                     
                     scene.add(sphere);
                     scene.add(label);
@@ -362,17 +427,16 @@
                     nodeObjects[nodeData.id] = { 
                         mesh: sphere, 
                         label: label, 
-                        glow: glow, 
-                        centrality: nodeData.centrality,
-                        adjustedSize: adjustedSize
+                        glows: glows,
+                        originalColor: nodeData.color 
                     };
                     
                 } catch (error) {
-                    console.error('创建节点失败:', nodeData.label, error);
+                    console.error('创建增强节点失败:', nodeData.label, error);
                 }
             });
             
-            console.log(`成功创建 ${Object.keys(nodeObjects).length} 个增强版节点`);
+            console.log(`成功创建 ${Object.keys(nodeObjects).length} 个增强节点`);
         }
 
         function createEnhancedEdges() {
@@ -384,14 +448,20 @@
                     const targetNode = graphData.nodes.find(n => n.id === edge.target);
                     
                     if (sourceNode && targetNode) {
-                        const geometry = new THREE.BufferGeometry();
-                        const vertices = new Float32Array([
-                            sourceNode.x, sourceNode.y, sourceNode.z,
-                            targetNode.x, targetNode.y, targetNode.z
-                        ]);
-                        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                        // 创建曲线连接
+                        const curve = new THREE.QuadraticBezierCurve3(
+                            new THREE.Vector3(sourceNode.x, sourceNode.y, sourceNode.z),
+                            new THREE.Vector3(
+                                (sourceNode.x + targetNode.x) / 2,
+                                (sourceNode.y + targetNode.y) / 2 + 2,
+                                (sourceNode.z + targetNode.z) / 2
+                            ),
+                            new THREE.Vector3(targetNode.x, targetNode.y, targetNode.z)
+                        );
                         
-                        // 增强线条效果
+                        const points = curve.getPoints(50);
+                        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                        
                         const material = new THREE.LineBasicMaterial({ 
                             color: 0x00D4FF, 
                             transparent: true, 
@@ -404,11 +474,11 @@
                         edgeObjects.push(line);
                     }
                 } catch (error) {
-                    console.error('创建连线失败:', edge, error);
+                    console.error('创建增强连线失败:', edge, error);
                 }
             });
             
-            console.log(`成功创建 ${edgeObjects.length} 条增强版连线`);
+            console.log(`成功创建 ${edgeObjects.length} 条增强连线`);
         }
 
         function addMouseEvents() {
@@ -428,29 +498,32 @@
 
                 if (intersects.length > 0) {
                     const nodeData = intersects[0].object.userData;
+                    const centrality = centralityMap[nodeData.id] || 0;
+                    
                     console.log('点击节点:', nodeData);
                     
-                    // 增强的节点高亮效果
-                    const originalEmissive = intersects[0].object.material.emissive.clone();
-                    intersects[0].object.material.emissive.setHex(0x666666);
-                    intersects[0].object.material.emissiveIntensity = 0.5;
+                    // 增强的高亮效果
+                    const nodeObj = nodeObjects[nodeData.id];
+                    nodeObj.mesh.material.emissive.setHex(0x666666);
+                    nodeObj.glows.forEach((glow, index) => {
+                        glow.material.opacity = 0.4 / (index + 1);
+                    });
                     
                     setTimeout(() => {
-                        if (intersects[0].object.material) {
-                            intersects[0].object.material.emissive.copy(originalEmissive);
-                            intersects[0].object.material.emissiveIntensity = 0.1;
+                        if (nodeObj.mesh.material) {
+                            nodeObj.mesh.material.emissive.setHex(0x000000);
+                            nodeObj.glows.forEach((glow, index) => {
+                                glow.material.opacity = 0.15 / (index + 1);
+                            });
                         }
-                    }, 800);
+                    }, 1000);
                     
                     alert(`节点信息:
 名称: ${nodeData.label}
-ID: ${nodeData.id}
-中心度: ${nodeData.centrality}
-连接数: ${nodeData.centrality}
-颜色: ${nodeData.color}
-大小: ${nodeData.size.toFixed(1)}
-
-💡 中心度越高的节点在图谱中越重要！`);
+中心度: ${centrality} (连接数)
+节点大小: ${nodeData.size.toFixed(2)}
+重要性: ${centrality >= 4 ? '高' : centrality >= 2 ? '中' : '低'}
+颜色: ${nodeData.color}`);
                 }
             }
 
@@ -464,23 +537,25 @@ ID: ${nodeData.id}
                 // 更新控制器
                 controls.update();
                 
-                // 增强的节点动画效果
+                // 增强的动画效果
                 Object.values(nodeObjects).forEach((nodeObj, index) => {
                     const time = Date.now() * 0.001;
                     if (nodeObj.mesh) {
-                        // 中心度高的节点旋转更慢更稳重
-                        const rotationSpeed = 0.3 + (1 / (nodeObj.centrality + 1)) * 0.5;
-                        nodeObj.mesh.rotation.y = time * rotationSpeed + index;
-                        
-                        // 中心度高的节点有更明显的呼吸光效
-                        const breathe = Math.sin(time * 2 + index) * 0.1 + 0.9;
-                        nodeObj.mesh.material.emissiveIntensity = 0.1 + nodeObj.centrality * 0.02 * breathe;
+                        nodeObj.mesh.rotation.y = time * 0.3 + index;
+                        nodeObj.mesh.rotation.x = Math.sin(time * 0.5 + index) * 0.1;
                     }
-                    if (nodeObj.glow) {
-                        nodeObj.glow.rotation.y = time * 0.2 + index;
-                        const glowBreathe = Math.sin(time * 1.5 + index) * 0.05 + 0.95;
-                        nodeObj.glow.material.opacity = (0.15 + nodeObj.centrality * 0.02) * glowBreathe;
+                    if (nodeObj.glows) {
+                        nodeObj.glows.forEach((glow, glowIndex) => {
+                            glow.rotation.y = time * (0.2 + glowIndex * 0.1) + index;
+                            glow.rotation.x = Math.sin(time * 0.3 + index + glowIndex) * 0.1;
+                        });
                     }
+                });
+                
+                // 连线动画效果
+                edgeObjects.forEach((edge, index) => {
+                    const time = Date.now() * 0.001;
+                    edge.material.opacity = 0.5 + Math.sin(time * 2 + index) * 0.2;
                 });
                 
                 renderer.render(scene, camera);
@@ -522,6 +597,10 @@ ID: ${nodeData.id}
                 return;
             }
             
+            if (typeof THREE.OrbitControls === 'undefined') {
+                console.warn('OrbitControls未加载，将不支持鼠标控制');
+            }
+            
             setTimeout(init, 1000);
         });
 
@@ -530,6 +609,20 @@ ID: ${nodeData.id}
             console.error('页面错误:', e.error);
             showError(`页面错误: ${e.message}`);
         });
+        
+        // 检测Three.js库加载状态
+        let checkCount = 0;
+        const checkInterval = setInterval(() => {
+            checkCount++;
+            if (typeof THREE !== 'undefined') {
+                console.log('Three.js库加载成功！');
+                clearInterval(checkInterval);
+            } else if (checkCount > 10) {
+                console.error('Three.js库加载超时');
+                showError('Three.js库加载超时，请刷新页面重试。');
+                clearInterval(checkInterval);
+            }
+        }, 500);
     </script>
 </body>
 </html> 
