@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoGen 3D知识图谱 - 交互增强版</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: #000000;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        #graph-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        /* 布局切换控件样式 */
+        .layout-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(15, 15, 30, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 212, 255, 0.4);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+        }
+        
+        .layout-controls label {
+            color: #00D4FF;
+            font-size: 14px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .layout-controls select {
+            background: rgba(0, 0, 0, 0.8);
+            color: #FFFFFF;
+            border: 1px solid rgba(0, 212, 255, 0.6);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .layout-controls select:hover {
+            border-color: rgba(0, 212, 255, 0.8);
+        }
+        
+        /* 信息面板样式 */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 15, 30, 0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .info-panel h3 {
+            margin: 0 0 15px 0;
+            color: #00D4FF;
+            font-size: 18px;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        
+        .control-item {
+            margin: 8px 0;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .stats {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 212, 255, 0.3);
+        }
+        
+        .feature-highlight {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 8px;
+            font-size: 11px;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00D4FF;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #00D4FF;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 节点高亮效果 */
+        .node-selected {
+            filter: drop-shadow(0 0 10px #00D4FF);
+        }
+    </style>
+</head>
+<body>
+    <div id="graph-container">
+        <div class="loading" id="loading">正在加载交互式3D知识图谱...</div>
+        
+        <!-- 布局切换控件 -->
+        <div class="layout-controls">
+            <label>🎛️ 切换布局:</label>
+            <select id="layoutSelect">
+                <option value="force">3D 力导向图</option>
+                <option value="tree">3D 树状图</option>
+                <option value="radial">3D 放射状图</option>
+            </select>
+        </div>
+        
+        <!-- 信息面板 -->
+        <div class="info-panel">
+            <h3>🧠 AutoGen 3D知识图谱</h3>
+            <div class="control-item">🖱️ 左键点击：选择节点高亮</div>
+            <div class="control-item">🖱️ 右键点击：显示节点信息</div>
+            <div class="control-item">🔍 滚轮：缩放视图</div>
+            <div class="control-item">🖱️ 拖拽：旋转/平移</div>
+            
+            <div class="stats">
+                <div class="control-item">📊 节点数量: <strong>15</strong></div>
+                <div class="control-item">🔗 关系数量: <strong>15</strong></div>
+                <div class="control-item">🎨 主题: <strong>深色科技风</strong></div>
+                <div class="control-item">📏 节点大小: <strong>基于中心度</strong></div>
+                <div class="control-item">🎛️ 当前布局: <strong><span id="currentLayout">3D 力导向图</span></strong></div>
+                <div class="control-item">✨ 选中节点: <strong><span id="selectedNode">无</span></strong></div>
+            </div>
+            
+            <div class="feature-highlight">
+                <div style="font-weight: bold; margin-bottom: 5px; color: #00D4FF;">🚀 交互功能:</div>
+                <div>• 动态布局切换</div>
+                <div>• 智能节点高亮</div>
+                <div>• 右键菜单信息</div>
+                <div>• 实时状态显示</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js 库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <script>
+        console.log('开始初始化交互式3D知识图谱...');
+        
+        // 状态管理
+        let currentLayout = 'force';
+        let selectedNodes = [];
+        
+        // 计算节点的中心度
+        function calculateCentrality() {
+            const centralityMap = {};
+            
+            graphData.nodes.forEach(node => {
+                centralityMap[node.id] = 0;
+            });
+            
+            graphData.edges.forEach(edge => {
+                centralityMap[edge.source] = (centralityMap[edge.source] || 0) + 1;
+                centralityMap[edge.target] = (centralityMap[edge.target] || 0) + 1;
+            });
+            
+            return centralityMap;
+        }
+        
+        // AutoGen系统提取的中文知识图谱数据
+        const graphData = {
+            nodes: [
+                { id: 1, label: '人工智能技术', color: '#FF4757', x: 0, y: 0, z: 0 },
+                { id: 2, label: 'OpenAI', color: '#5DADE2', x: 5, y: 2, z: 3 },
+                { id: 3, label: 'GPT', color: '#48CAE4', x: 8, y: 1, z: 2 },
+                { id: 4, label: 'ChatGPT', color: '#06FFA5', x: 10, y: 3, z: 1 },
+                { id: 5, label: 'DeepMind', color: '#FFB142', x: -5, y: 4, z: -2 },
+                { id: 6, label: 'AlphaGo', color: '#DDA0DD', x: -8, y: 2, z: -4 },
+                { id: 7, label: '深度学习', color: '#54A0FF', x: 2, y: -3, z: 5 },
+                { id: 8, label: '机器学习', color: '#5F27CD', x: -2, y: -4, z: 4 },
+                { id: 9, label: '自然语言处理', color: '#FF6B9D', x: 6, y: -2, z: -3 },
+                { id: 10, label: '计算机视觉', color: '#C44569', x: -6, y: -1, z: 3 },
+                { id: 11, label: '阿兰·图灵', color: '#F8C471', x: 3, y: 6, z: -1 },
+                { id: 12, label: '图灵测试', color: '#BB6BD9', x: 5, y: 7, z: 0 },
+                { id: 13, label: '神经网络', color: '#FF7675', x: 0, y: -6, z: 2 },
+                { id: 14, label: '李世石', color: '#74B9FF', x: -10, y: 3, z: -6 },
+                { id: 15, label: '腾讯', color: '#FDCB6E', x: 4, y: 5, z: -5 }
+            ],
+            edges: [
+                { source: 2, target: 3, label: '开发' },
+                { source: 2, target: 4, label: '开发' },
+                { source: 3, target: 4, label: '基础模型' },
+                { source: 5, target: 6, label: '开发' },
+                { source: 1, target: 7, label: '包含' },
+                { source: 1, target: 8, label: '包含' },
+                { source: 1, target: 9, label: '包含' },
+                { source: 1, target: 10, label: '包含' },
+                { source: 7, target: 13, label: '基于' },
+                { source: 8, target: 7, label: '包含' },
+                { source: 11, target: 12, label: '提出' },
+                { source: 11, target: 1, label: '奠定基础' },
+                { source: 6, target: 14, label: '击败' },
+                { source: 9, target: 3, label: '应用领域' },
+                { source: 15, target: 1, label: '研发' }
+            ]
+        };
+
+        // 初始化节点大小
+        const centralityMap = calculateCentrality();
+        const maxCentrality = Math.max(...Object.values(centralityMap));
+        const minCentrality = Math.min(...Object.values(centralityMap));
+
+        graphData.nodes.forEach(node => {
+            const centrality = centralityMap[node.id] || 0;
+            const normalizedCentrality = (centrality - minCentrality) / (maxCentrality - minCentrality);
+            node.size = 0.8 + normalizedCentrality * 2.2;
+            node.centrality = centrality;
+        });
+
+        // 3D场景变量
+        let scene, camera, renderer, controls;
+        let nodeObjects = {};
+        let edgeObjects = [];
+
+        // 布局算法
+        function applyLayout(layoutType) {
+            console.log('应用布局:', layoutType);
+            
+            switch(layoutType) {
+                case 'force':
+                    applyForceLayout();
+                    break;
+                case 'tree':
+                    applyTreeLayout();
+                    break;
+                case 'radial':
+                    applyRadialLayout();
+                    break;
+            }
+            
+            // 更新节点位置
+            updateNodePositions();
+        }
+
+        function applyForceLayout() {
+            // 力导向布局 - 随机分布后让物理引擎处理
+            graphData.nodes.forEach(node => {
+                node.x = (Math.random() - 0.5) * 20;
+                node.y = (Math.random() - 0.5) * 20;
+                node.z = (Math.random() - 0.5) * 20;
+            });
+        }
+
+        function applyTreeLayout() {
+            // 树状布局 - 以"人工智能技术"为根节点
+            const rootNode = graphData.nodes.find(n => n.label === '人工智能技术');
+            if (rootNode) {
+                rootNode.x = 0;
+                rootNode.y = 8;
+                rootNode.z = 0;
+                
+                // 找到直接连接的子节点
+                const children = [];
+                graphData.edges.forEach(edge => {
+                    if (edge.source === rootNode.id) {
+                        const childNode = graphData.nodes.find(n => n.id === edge.target);
+                        if (childNode) children.push(childNode);
+                    } else if (edge.target === rootNode.id) {
+                        const childNode = graphData.nodes.find(n => n.id === edge.source);
+                        if (childNode) children.push(childNode);
+                    }
+                });
+                
+                // 分布子节点
+                children.forEach((child, index) => {
+                    const angle = (index / children.length) * Math.PI * 2;
+                    child.x = Math.cos(angle) * 8;
+                    child.y = 0;
+                    child.z = Math.sin(angle) * 8;
+                });
+                
+                // 其他节点放在下层
+                graphData.nodes.forEach((node, index) => {
+                    if (node !== rootNode && !children.includes(node)) {
+                        const angle = (index / graphData.nodes.length) * Math.PI * 2;
+                        node.x = Math.cos(angle) * 12;
+                        node.y = -8;
+                        node.z = Math.sin(angle) * 12;
+                    }
+                });
+            }
+        }
+
+        function applyRadialLayout() {
+            // 放射状布局 - 根据中心度分层
+            const center = { x: 0, y: 0, z: 0 };
+            
+            // 按中心度排序
+            const sortedNodes = [...graphData.nodes].sort((a, b) => (b.centrality || 0) - (a.centrality || 0));
+            
+            sortedNodes.forEach((node, index) => {
+                const layer = Math.floor(index / 5); // 每层5个节点
+                const posInLayer = index % 5;
+                const radius = 3 + layer * 4;
+                
+                const angle = (posInLayer / 5) * Math.PI * 2;
+                const elevation = (Math.random() - 0.5) * 4;
+                
+                node.x = Math.cos(angle) * radius;
+                node.y = elevation;
+                node.z = Math.sin(angle) * radius;
+            });
+        }
+
+        function updateNodePositions() {
+            graphData.nodes.forEach(nodeData => {
+                const nodeObj = nodeObjects[nodeData.id];
+                if (nodeObj) {
+                    // 平滑过渡到新位置
+                    animateToPosition(nodeObj.mesh, nodeData.x, nodeData.y, nodeData.z);
+                    animateToPosition(nodeObj.label, nodeData.x, nodeData.y + nodeData.size + 2, nodeData.z);
+                    if (nodeObj.glows) {
+                        nodeObj.glows.forEach(glow => {
+                            animateToPosition(glow, nodeData.x, nodeData.y, nodeData.z);
+                        });
+                    }
+                }
+            });
+            
+            // 更新连线
+            updateEdgeGeometry();
+        }
+
+        function animateToPosition(object, targetX, targetY, targetZ) {
+            const duration = 1000; // 1秒过渡
+            const startPos = {
+                x: object.position.x,
+                y: object.position.y,
+                z: object.position.z
+            };
+            
+            const startTime = Date.now();
+            
+            function updatePosition() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // 使用easeInOutCubic缓动
+                const eased = progress < 0.5 ? 4 * progress * progress * progress : 
+                    1 - Math.pow(-2 * progress + 2, 3) / 2;
+                
+                object.position.x = startPos.x + (targetX - startPos.x) * eased;
+                object.position.y = startPos.y + (targetY - startPos.y) * eased;
+                object.position.z = startPos.z + (targetZ - startPos.z) * eased;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updatePosition);
+                }
+            }
+            
+            updatePosition();
+        }
+
+        function updateEdgeGeometry() {
+            edgeObjects.forEach((edgeObj, index) => {
+                const edge = graphData.edges[index];
+                const sourceNode = graphData.nodes.find(n => n.id === edge.source);
+                const targetNode = graphData.nodes.find(n => n.id === edge.target);
+                
+                if (sourceNode && targetNode && edgeObj.geometry) {
+                    const positions = new Float32Array([
+                        sourceNode.x, sourceNode.y, sourceNode.z,
+                        targetNode.x, targetNode.y, targetNode.z
+                    ]);
+                    edgeObj.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                }
+            });
+        }
+
+        // 节点交互处理
+        function handleNodeClick(nodeData) {
+            console.log('节点被点击:', nodeData);
+            
+            // 更新选中状态
+            selectedNodes = [nodeData.id];
+            updateSelectedNodeDisplay();
+            
+            // 高亮效果
+            highlightNode(nodeData.id);
+        }
+
+        function handleNodeRightClick(nodeData) {
+            console.log('节点被右键点击:', nodeData);
+            const centrality = centralityMap[nodeData.id] || 0;
+            alert(`右键点击了: ${nodeData.label} (ID: ${nodeData.id})
+中心度: ${centrality}
+重要性: ${centrality >= 4 ? '高' : centrality >= 2 ? '中' : '低'}`);
+        }
+
+        function highlightNode(nodeId) {
+            // 重置所有节点
+            Object.values(nodeObjects).forEach(nodeObj => {
+                if (nodeObj.mesh.material) {
+                    nodeObj.mesh.material.emissive.setHex(0x000000);
+                    nodeObj.mesh.scale.set(1, 1, 1);
+                }
+            });
+            
+            // 高亮选中节点
+            const nodeObj = nodeObjects[nodeId];
+            if (nodeObj && nodeObj.mesh.material) {
+                nodeObj.mesh.material.emissive.setHex(0x444444);
+                nodeObj.mesh.scale.set(1.2, 1.2, 1.2);
+            }
+        }
+
+        function updateSelectedNodeDisplay() {
+            const selectedNodeSpan = document.getElementById('selectedNode');
+            if (selectedNodes.length > 0) {
+                const selectedNode = graphData.nodes.find(n => n.id === selectedNodes[0]);
+                selectedNodeSpan.textContent = selectedNode ? selectedNode.label : selectedNodes.join(', ');
+            } else {
+                selectedNodeSpan.textContent = '无';
+            }
+        }
+
+        // 初始化3D场景
+        function init() {
+            console.log('正在初始化交互式Three.js场景...');
+            
+            try {
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x000000);
+                
+                createStarField();
+                
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(25, 25, 25);
+
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                document.getElementById('graph-container').appendChild(renderer.domElement);
+
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.03;
+                controls.maxDistance = 100;
+                controls.minDistance = 10;
+
+                addEnhancedLighting();
+                createEnhancedNodes();
+                createEnhancedEdges();
+                addMouseEvents();
+
+                document.getElementById('loading').style.display = 'none';
+                
+                console.log('交互式3D知识图谱初始化完成！');
+                animate();
+                
+            } catch (error) {
+                console.error('初始化失败:', error);
+            }
+        }
+
+        function createStarField() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starCount = 200;
+            const positions = new Float32Array(starCount * 3);
+            
+            for (let i = 0; i < starCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 200;
+                positions[i + 1] = (Math.random() - 0.5) * 200;
+                positions[i + 2] = (Math.random() - 0.5) * 200;
+            }
+            
+            starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0x00D4FF,
+                size: 0.5,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+        }
+
+        function addEnhancedLighting() {
+            const ambientLight = new THREE.AmbientLight(0x404080, 0.4);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0x00D4FF, 0.6);
+            directionalLight.position.set(15, 15, 10);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            const pointLight1 = new THREE.PointLight(0xFF6B6B, 0.3, 50);
+            pointLight1.position.set(-10, 10, -10);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0x48CAE4, 0.3, 50);
+            pointLight2.position.set(10, -10, 10);
+            scene.add(pointLight2);
+        }
+
+        function createEnhancedNodes() {
+            graphData.nodes.forEach(nodeData => {
+                try {
+                    const geometry = new THREE.SphereGeometry(nodeData.size, 32, 32);
+                    const material = new THREE.MeshPhongMaterial({ 
+                        color: nodeData.color,
+                        transparent: true,
+                        opacity: 0.9,
+                        shininess: 100,
+                        emissive: new THREE.Color(nodeData.color).multiplyScalar(0.1)
+                    });
+                    
+                    const sphere = new THREE.Mesh(geometry, material);
+                    sphere.position.set(nodeData.x, nodeData.y, nodeData.z);
+                    sphere.castShadow = true;
+                    sphere.userData = nodeData;
+                    
+                    // 发光效果
+                    const glows = [];
+                    for (let i = 0; i < 3; i++) {
+                        const glowSize = nodeData.size * (1.3 + i * 0.3);
+                        const glowOpacity = 0.15 / (i + 1);
+                        
+                        const glowGeometry = new THREE.SphereGeometry(glowSize, 16, 16);
+                        const glowMaterial = new THREE.MeshBasicMaterial({
+                            color: nodeData.color,
+                            transparent: true,
+                            opacity: glowOpacity
+                        });
+                        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                        glow.position.copy(sphere.position);
+                        scene.add(glow);
+                        glows.push(glow);
+                    }
+
+                    // 文字标签
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = 512;
+                    canvas.height = 128;
+                    
+                    const gradient = context.createLinearGradient(0, 0, 512, 0);
+                    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+                    gradient.addColorStop(0.5, 'rgba(0, 212, 255, 0.2)');
+                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+                    context.fillStyle = gradient;
+                    context.fillRect(0, 0, 512, 128);
+                    
+                    context.fillStyle = '#FFFFFF';
+                    context.font = 'bold 28px Microsoft YaHei, Arial';
+                    context.textAlign = 'center';
+                    context.strokeStyle = nodeData.color;
+                    context.lineWidth = 2;
+                    context.strokeText(nodeData.label, 256, 75);
+                    context.fillText(nodeData.label, 256, 75);
+                    
+                    const texture = new THREE.CanvasTexture(canvas);
+                    const labelMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+                    const label = new THREE.Sprite(labelMaterial);
+                    label.position.set(nodeData.x, nodeData.y + nodeData.size + 2, nodeData.z);
+                    label.scale.set(6, 1.5, 1);
+                    
+                    scene.add(sphere);
+                    scene.add(label);
+                    
+                    nodeObjects[nodeData.id] = { 
+                        mesh: sphere, 
+                        label: label, 
+                        glows: glows,
+                        originalColor: nodeData.color 
+                    };
+                    
+                } catch (error) {
+                    console.error('创建节点失败:', nodeData.label, error);
+                }
+            });
+        }
+
+        function createEnhancedEdges() {
+            graphData.edges.forEach(edge => {
+                try {
+                    const sourceNode = graphData.nodes.find(n => n.id === edge.source);
+                    const targetNode = graphData.nodes.find(n => n.id === edge.target);
+                    
+                    if (sourceNode && targetNode) {
+                        const geometry = new THREE.BufferGeometry();
+                        const vertices = new Float32Array([
+                            sourceNode.x, sourceNode.y, sourceNode.z,
+                            targetNode.x, targetNode.y, targetNode.z
+                        ]);
+                        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                        
+                        const material = new THREE.LineBasicMaterial({ 
+                            color: 0x00D4FF, 
+                            transparent: true, 
+                            opacity: 0.7
+                        });
+                        const line = new THREE.Line(geometry, material);
+                        
+                        scene.add(line);
+                        edgeObjects.push(line);
+                    }
+                } catch (error) {
+                    console.error('创建连线失败:', edge, error);
+                }
+            });
+        }
+
+        function addMouseEvents() {
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            function onMouseClick(event) {
+                if (event.target !== renderer.domElement) return;
+                
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                
+                const nodeObjects_array = Object.values(nodeObjects).map(obj => obj.mesh);
+                const intersects = raycaster.intersectObjects(nodeObjects_array);
+
+                if (intersects.length > 0) {
+                    const nodeData = intersects[0].object.userData;
+                    handleNodeClick(nodeData);
+                } else {
+                    // 点击空白处取消选择
+                    selectedNodes = [];
+                    updateSelectedNodeDisplay();
+                    highlightNode(null);
+                }
+            }
+
+            function onMouseRightClick(event) {
+                event.preventDefault();
+                if (event.target !== renderer.domElement) return;
+                
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                
+                const nodeObjects_array = Object.values(nodeObjects).map(obj => obj.mesh);
+                const intersects = raycaster.intersectObjects(nodeObjects_array);
+
+                if (intersects.length > 0) {
+                    const nodeData = intersects[0].object.userData;
+                    handleNodeRightClick(nodeData);
+                }
+            }
+
+            renderer.domElement.addEventListener('click', onMouseClick);
+            renderer.domElement.addEventListener('contextmenu', onMouseRightClick);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            try {
+                controls.update();
+                
+                Object.values(nodeObjects).forEach((nodeObj, index) => {
+                    const time = Date.now() * 0.001;
+                    if (nodeObj.mesh) {
+                        nodeObj.mesh.rotation.y = time * 0.3 + index;
+                    }
+                    if (nodeObj.glows) {
+                        nodeObj.glows.forEach((glow, glowIndex) => {
+                            glow.rotation.y = time * (0.2 + glowIndex * 0.1) + index;
+                        });
+                    }
+                });
+                
+                renderer.render(scene, camera);
+            } catch (error) {
+                console.error('渲染错误:', error);
+            }
+        }
+
+        // 布局切换事件处理
+        document.getElementById('layoutSelect').addEventListener('change', function(event) {
+            const newLayout = event.target.value;
+            currentLayout = newLayout;
+            
+            const layoutNames = {
+                'force': '3D 力导向图',
+                'tree': '3D 树状图',
+                'radial': '3D 放射状图'
+            };
+            
+            document.getElementById('currentLayout').textContent = layoutNames[newLayout];
+            console.log('布局切换到:', newLayout);
+            
+            applyLayout(newLayout);
+        });
+
+        function onWindowResize() {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+        window.addEventListener('resize', onWindowResize);
+        window.addEventListener('load', () => {
+            if (typeof THREE === 'undefined') {
+                document.getElementById('loading').innerHTML = 'Three.js库加载失败，请检查网络连接。';
+                return;
+            }
+            setTimeout(init, 1000);
+        });
+    </script>
+</body>
+</html> 
